@@ -17,13 +17,14 @@ def generar_descripcion_ia(nombre_producto, caracteristicas_basicas):
         Nombre: {nombre_producto}
         Características: {caracteristicas_basicas}
         
-        Responde DIRECTAMENTE con la descripción, sin introducciones ni comillas.
+        IMPORTANTE: Responde SOLO con el texto plano. NO uses comillas en tu respuesta.
+
         """
         
         chat_completion = client.chat.completions.create(
              # Usamos Llama3 (versión rápida)
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
         )
         
         return chat_completion.choices[0].message.content.strip()

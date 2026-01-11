@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import InventoryPage from './pages/InventoryPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,7 +48,12 @@ function App() {
               <Dashboard />
             </ProtectedRoute>
           } />
-
+          {/* NUEVA RUTA DINÁMICA */}
+          <Route path="/dashboard/empresa/:nit" element={
+            <ProtectedRoute>
+              <InventoryPage />
+            </ProtectedRoute>
+          } />
           {/* Ruta defauly */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
