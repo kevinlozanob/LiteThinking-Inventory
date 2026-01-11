@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
-
 export type ToastType = 'success' | 'error' | 'info';
 
 interface ToastProps {
@@ -13,7 +12,6 @@ interface ToastProps {
 
 export const Toast = ({ id, message, type, onClose }: ToastProps) => {
   useEffect(() => {
-    // Auto-cierre a los 4 segundos
     const timer = setTimeout(() => {
       onClose(id);
     }, 4000);
@@ -28,20 +26,20 @@ export const Toast = ({ id, message, type, onClose }: ToastProps) => {
   };
 
   const icons = {
-    success: <CheckCircle size={20} className="text-green-500" />,
-    error: <AlertCircle size={20} className="text-red-500" />,
-    info: <Info size={20} className="text-blue-500" />
+    success: <CheckCircle size={18} className="text-green-500 flex-shrink-0" />,
+    error: <AlertCircle size={18} className="text-red-500 flex-shrink-0" />,
+    info: <Info size={18} className="text-blue-500 flex-shrink-0" />
   };
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-4 rounded-lg border-l-4 min-w-[320px] mb-3 transition-all animate-[slideIn_0.3s_ease-out] relative bg-white border border-gray-100 ${styles[type]}`}>
+    <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 rounded-lg border-l-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] max-w-[400px] mb-2 sm:mb-3 transition-all animate-[slideIn_0.3s_ease-out] relative bg-white border border-gray-100 ${styles[type]}`}>
       {icons[type]}
-      <div className="flex-1">
-        <p className="text-sm font-semibold">{message}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs sm:text-sm font-semibold truncate">{message}</p>
       </div>
       <button 
         onClick={() => onClose(id)} 
-        className="text-gray-400 hover:text-gray-600 transition-colors"
+        className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
       >
         <X size={16} />
       </button>

@@ -66,11 +66,21 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
           required 
         />
 
-        <div className="md:col-span-2 flex gap-3 mt-2">
-           <Button type="button"  onClick={onCancel} className="bg-gray-300 hover:bg-gray-400 text-gray-800">
+        {/* CAMBIO AQUÍ: Contenedor Flex ajustado para no desbordar */}
+        <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 mt-4">
+           <Button 
+            type="button"  
+            onClick={onCancel} 
+            className="bg-gray-300 hover:bg-gray-400 text-gray-800 w-full sm:w-auto px-6"
+           >
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" disabled={loading}>
+          <Button 
+            type="submit" 
+            variant="primary" 
+            disabled={loading}
+            className="w-full sm:flex-1" // Ocupa todo el ancho en móvil, y el espacio restante en PC
+          >
             {loading ? "Guardando..." : "Guardar Empresa"}
           </Button>
         </div>

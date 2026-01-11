@@ -8,7 +8,14 @@ import InventoryPage from './pages/InventoryPage';
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) return <div>Cargando...</div>;
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-[#E6C200] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <p className="text-gray-500 text-sm">Cargando...</p>
+      </div>
+    </div>
+  );
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -17,7 +24,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Componente para redireccionar si ya está logueado
 const PublicRoute = ({ children }: { children: JSX.Element }) => {
     const { isAuthenticated } = useAuth();
     if (isAuthenticated) {
@@ -25,36 +31,32 @@ const PublicRoute = ({ children }: { children: JSX.Element }) => {
     }
     return children;
 }
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Ruta Pública (Login)*/}
           <Route path="/login" element={
               <PublicRoute>
                   <Login />
               </PublicRoute>
           } />
-          {/* Registro */}
-           <Route path="/register" element={
+          <Route path="/register" element={
               <PublicRoute>
                   <Register />
               </PublicRoute>
           } />
-          {/* Ruta JWT (Dashboard) */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
           } />
-          {/* NUEVA RUTA DINÁMICA */}
           <Route path="/dashboard/empresa/:nit" element={
             <ProtectedRoute>
               <InventoryPage />
             </ProtectedRoute>
           } />
-          {/* Ruta defauly */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

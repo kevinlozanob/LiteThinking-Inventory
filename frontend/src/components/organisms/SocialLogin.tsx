@@ -10,11 +10,11 @@ export const SocialLogin = () => {
     );
 
     return (
-        <div className="flex flex-col gap-3">
-            <Button variant="social" icon={GoogleIcon}>
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+            <Button variant="social" icon={GoogleIcon} className="h-[42px] sm:h-[46px] text-xs sm:text-sm">
                 Google
             </Button>
-            <Button variant="social" icon={FacebookIcon}>
+            <Button variant="social" icon={FacebookIcon} className="h-[42px] sm:h-[46px] text-xs sm:text-sm">
                 Facebook
             </Button>
         </div>

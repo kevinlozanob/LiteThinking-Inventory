@@ -31,9 +31,7 @@ export const RegisterForm = () => {
       navigate('/login');
     } catch (err: any) {
       console.error("Error registro:", err);
-
       const msg = err.response?.data?.email?.[0] || "Error al registrarse. Intente nuevamente.";
-      
       showToast(msg, 'error');
     } finally {
       setLoading(false);
@@ -41,14 +39,14 @@ export const RegisterForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:gap-3">
       <Input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Correo electrónico"
         required
+        className="h-[42px] sm:h-[46px] text-sm"
       />
       
       <PasswordField 
@@ -56,6 +54,7 @@ export const RegisterForm = () => {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Contraseña"
         required
+        className="h-[42px] sm:h-[46px] text-sm"
       />
 
       <PasswordField 
@@ -63,9 +62,10 @@ export const RegisterForm = () => {
         onChange={(e) => setConfirmPass(e.target.value)}
         placeholder="Confirmar Contraseña"
         required
+        className="h-[42px] sm:h-[46px] text-sm"
       />
 
-      <Button type="submit" variant="primary" disabled={loading} className='mt-2'>
+      <Button type="submit" variant="primary" disabled={loading} className="mt-1.5 sm:mt-2 h-[42px] sm:h-[46px]">
         {loading ? "Creando cuenta..." : "Crear Cuenta"}
       </Button>
     </form>

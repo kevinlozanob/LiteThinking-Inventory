@@ -22,15 +22,10 @@ export const LoginForm = () => {
 
     try {
       const data = await LoginService(email, password);
-      
-      // AQUI EL CAMBIO: Pasamos el token Y el estado de admin
       login(data.access, data.is_admin);
-      
       navigate('/dashboard');
-      
     } catch (err: any) {
       console.error("Error login:", err);
-
       if (err.response?.status === 401) {
         setError("Correo o contraseña incorrectos.");
       } else {
@@ -42,9 +37,9 @@ export const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:gap-3">
       {error && (
-        <div className="bg-red-500/20 border border-red-500 text-red-100 text-xs p-2 rounded text-center">
+        <div className="bg-red-500/20 border border-red-500 text-red-100 text-xs p-2 sm:p-2.5 rounded text-center">
           {error}
         </div>
       )}
@@ -55,6 +50,7 @@ export const LoginForm = () => {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Correo electrónico"
         required
+        className="h-[42px] sm:h-[46px] text-sm"
       />
       
       <PasswordField 
@@ -62,9 +58,10 @@ export const LoginForm = () => {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Contraseña"
         required
+        className="h-[42px] sm:h-[46px] text-sm"
       />
 
-      <Button type="submit" variant="primary" disabled={loading} className='mt-2'>
+      <Button type="submit" variant="primary" disabled={loading} className="mt-1.5 sm:mt-2 h-[42px] sm:h-[46px]">
         {loading ? "Cargando..." : "Inicia sesión"}
       </Button>
     </form>

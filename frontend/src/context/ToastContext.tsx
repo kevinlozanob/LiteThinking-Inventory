@@ -22,9 +22,9 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Contenedor Flotante (Portal) */}
-      <div className="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none">
-        <div className="pointer-events-auto"> {/* Habilita clicks solo en los toasts */}
+      {/* Contenedor Flotante - Responsive */}
+      <div className="fixed top-4 left-4 right-4 sm:left-auto sm:top-6 sm:right-6 z-[9999] flex flex-col items-center sm:items-end pointer-events-none">
+        <div className="pointer-events-auto w-full sm:w-auto">
           {toasts.map((t) => (
             <Toast 
               key={t.id} 

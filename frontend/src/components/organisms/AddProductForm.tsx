@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '../atoms/Input';
 import { Button } from '../atoms/Button';
 import { createProducto, generarDescripcionIA } from '../../services/productoService';
-import { Wand2 } from 'lucide-react';
+import { Wand2, X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
 interface Props {
@@ -48,7 +48,6 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
     setLoading(true);
 
     try {
-      // objeto JSON de precios
       const preciosJSON = {
         [formData.moneda]: parseFloat(formData.precio)
       };
@@ -61,7 +60,8 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         precios: preciosJSON
       });
       
-      showToast("Producto creado exitosamente", 'success'); 
+      showToast("Producto creado exitosamente", 'success');
+      onSuccess();
     } catch (err) {
       showToast("Error al guardar. Revisa que el código no esté repetido.", 'error');
       console.error(err);
@@ -71,12 +71,15 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
   };
 
   return (
-    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 animate-[fadeIn_0.3s_ease-out]">
-      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-         Nuevo Producto
-      </h3>
+    <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200 mb-6 animate-[fadeIn_0.3s_ease-out]">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-base sm:text-lg font-bold text-gray-800">Nuevo Producto</h3>
+        <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 sm:hidden">
+          <X size={20}/>
+        </button>
+      </div>
       
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <Input 
           placeholder="Código Único" 
           value={formData.codigo}
@@ -91,11 +94,11 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         />
         
         {/* Sección IA */}
-        <div className="md:col-span-2 relative group">
+        <div className="sm:col-span-2 relative">
           <textarea
-            className="w-full p-3 pr-36 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#E6C200] text-sm resize-none transition-all"
+            className="w-full p-3 pb-12 sm:pb-3 sm:pr-36 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#E6C200] text-sm resize-none transition-all"
             rows={3}
-            placeholder="Características (Escribe manual o usa la IA →)"
+            placeholder="Características del producto..."
             value={formData.caracteristicas}
             onChange={e => setFormData({...formData, caracteristicas: e.target.value})}
             required
@@ -104,7 +107,7 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             type="button"
             onClick={handleAI}
             disabled={generatingAI}
-            className="absolute top-3 right-3 flex items-center gap-1 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-purple-700 disabled:opacity-50 shadow-sm transition-all hover:shadow-md z-10"
+            className="absolute bottom-3 right-3 sm:top-3 sm:bottom-auto flex items-center gap-1 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-purple-700 disabled:opacity-50 shadow-sm transition-all hover:shadow-md"
           >
             <Wand2 size={12} className={generatingAI ? "animate-spin" : ""} />
             {generatingAI ? "Generando..." : "Generar con IA"}
@@ -112,9 +115,9 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         </div>
 
         {/* Precios */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:col-span-1">
             <select 
-                className="rounded border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E6C200]"
+                className="rounded border border-gray-200 px-2 sm:px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E6C200] min-w-[70px]"
                 value={formData.moneda}
                 onChange={e => setFormData({...formData, moneda: e.target.value})}
             >
@@ -131,11 +134,11 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             />
         </div>
 
-        <div className="md:col-span-2 flex gap-3 mt-2 justify-end">
-           <Button type="button" onClick={onCancel} className="bg-gray-200 hover:bg-gray-300 w-auto px-4 text-gray-700 border border-gray-300">
+        <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 mt-2 sm:justify-end">
+          <Button type="button" onClick={onCancel} className="bg-gray-200 hover:bg-gray-300 w-full sm:w-auto px-4 text-gray-700 border border-gray-300 hidden sm:flex">
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" disabled={loading} className="w-auto px-6 shadow-sm">
+          <Button type="submit" variant="primary" disabled={loading} className="w-full sm:w-auto px-6 shadow-sm">
             {loading ? "Guardando..." : "Guardar Producto"}
           </Button>
         </div>
