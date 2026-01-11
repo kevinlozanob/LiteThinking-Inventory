@@ -1,0 +1,32 @@
+from decouple import config
+from groq import Groq
+
+def generar_descripcion_ia(nombre_producto, caracteristicas_basicas):
+
+    api_key = config('GROQ_API_KEY', default=None)
+    
+    if not api_key:
+        return "Error: API Key de Groq no configurada (Backend)."
+        
+    try:
+        client = Groq(api_key=api_key)
+        
+        prompt = f"""
+        Actúa como un experto en copywriting para e-commerce.
+        Crea una descripción corta, persuasiva y emocionante (máximo 40 palabras) para vender este producto:
+        Nombre: {nombre_producto}
+        Características: {caracteristicas_basicas}
+        
+        Responde DIRECTAMENTE con la descripción, sin introducciones ni comillas.
+        """
+        
+        chat_completion = client.chat.completions.create(
+             # Usamos Llama3 (versión rápida)
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.1-8b-instant",
+        )
+        
+        return chat_completion.choices[0].message.content.strip()
+        
+    except Exception as e:
+        return f"Error al consultar IA: {str(e)}"

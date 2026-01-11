@@ -1,33 +1,42 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.http import FileResponse
+
 from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer
-from django.http import FileResponse # <--- Importar
-from rest_framework.decorators import action # <--- Importar
-from rest_framework.response import Response # <--- Importar
-from .utils import generar_pdf_inventario # <--- Importar
+
+
+from .reports import generar_pdf_inventario   
+from .ai import generar_descripcion_ia        
+# --------------------------------------
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = EmpresaModel.objects.all()
     serializer_class = EmpresaSerializer
-    
     permission_classes = [IsAuthenticatedOrReadOnly] 
 
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    # GET /api/productos/descargar_reporte/
+    
+    # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])
     def descargar_reporte(self, request):
-        """
-        Genera y descarga un PDF con el inventario actual.
-        """
         productos = self.get_queryset()
         buffer = generar_pdf_inventario(productos)
+        return FileResponse(buffer, as_attachment=True, filename='inventario.pdf')
+
+    # Endpoint para AI
+    @action(detail=False, methods=['post'])
+    def generar_descripcion(self, request):
+        nombre = request.data.get('nombre')
+        caracteristicas = request.data.get('caracteristicas', '')
         
-        return FileResponse(
-            buffer, 
-            as_attachment=True, 
-            filename='inventario_productos.pdf'
-        )
+        if not nombre:
+            return Response({"error": "Falta nombre del producto"}, status=400)
+            
+        texto = generar_descripcion_ia(nombre, caracteristicas)
+        return Response({"descripcion": texto})
