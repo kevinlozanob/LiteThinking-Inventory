@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductos, downloadPDF, sendEmailReport, type Producto } from '../services/productoService';
+import { getEmpresaByNit, type Empresa } from '../services/empresaService'; 
 import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { useAuth } from '../context/AuthContext';
@@ -12,27 +13,38 @@ export default function InventoryPage() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   
-  // <-- Instanciamos Toasts
   const { showToast } = useToast();
-
+  
+  // Estado
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [empresaInfo, setEmpresaInfo] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-
   const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
-    cargarProductos();
+    if (nit) {
+        cargarDataCompuesto();
+    }
   }, [nit]);
 
-  const cargarProductos = async () => {
+  const cargarDataCompuesto = async () => {
+    setLoading(true);
     try {
-      const allProductos = await getProductos();
+
+      const [empresaData, allProductos] = await Promise.all([
+        getEmpresaByNit(nit!),
+        getProductos()
+      ]);
+      
+      setEmpresaInfo(empresaData);
+
       const filtrados = allProductos.filter(p => String(p.empresa) === String(nit));
       setProductos(filtrados);
+
     } catch (error) {
       console.error(error);
-      showToast("Error cargando productos", 'error');
+      showToast("Error cargando el inventario de la empresa", 'error');
     } finally {
       setLoading(false);
     }
@@ -74,14 +86,18 @@ export default function InventoryPage() {
             Volver a Empresas
         </Button>
 
-        <header className="flex justify-between items-center mb-6 bg-white p-6 rounded-lg shadow-sm">
+        <header className="flex justify-between items-center mb-6 bg-white p-6 rounded-lg shadow-sm animate-[fadeIn_0.5s_ease-out]">
           <div>
-            <h1 className="text-xl font-bold text-gray-800">Inventario de Empresa</h1>
-            <p className="text-gray-500 text-sm">NIT: {nit}</p>
+            <h1 className="text-xl font-bold text-gray-800">
+               {empresaInfo ? `Inventario: ${empresaInfo.nombre}` : 'Cargando empresa...'}
+            </h1>
+            <p className="text-gray-500 text-sm">
+                NIT: {nit} {empresaInfo && `• Tel: ${empresaInfo.telefono}`}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button onClick={handleDownloadPDF} className="w-auto px-4 bg-red-600 hover:bg-red-700 text-white" icon={<FileText size={16}/>}>
-                Descargar PDF
+                PDF Global
             </Button>
 
             <Button 
@@ -93,7 +109,7 @@ export default function InventoryPage() {
                 {sendingEmail ? 'Enviando...' : 'Enviar Reporte'}
             </Button>
             
-            {/* CONDICIONAL: Solo Admin ve el boton de agregar */}
+            {/* CONDICIONAL: Solo Admin puede crear productos */}
             {isAdmin && (
                 <Button onClick={() => setShowForm(!showForm)} variant="primary" className="w-auto px-4">
                     {showForm ? 'Cerrar Formulario' : '+ Agregar Producto'}
@@ -106,7 +122,7 @@ export default function InventoryPage() {
             <AddProductForm 
                 empresaNit={nit!} 
                 onSuccess={() => {
-                    cargarProductos();
+                    cargarDataCompuesto();
                     setShowForm(false);
                 }} 
                 onCancel={() => setShowForm(false)} 
@@ -115,7 +131,7 @@ export default function InventoryPage() {
 
         {/* Tabla de Productos */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-            {loading ? <div className="p-8 text-center text-gray-500">Cargando inventario...</div> : (
+            {loading ? <div className="p-12 text-center text-gray-500">Cargando datos...</div> : (
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>

@@ -12,6 +12,11 @@ export const getEmpresas = async (): Promise<Empresa[]> => {
   return response.data;
 };
 
+export const getEmpresaByNit = async (nit: string): Promise<Empresa> => {
+  const response = await api.get<Empresa>(`empresas/${nit}/`);
+  return response.data;
+};
+
 export const createEmpresa = async (data: Empresa): Promise<Empresa> => {
   const response = await api.post<Empresa>('empresas/', data);
   return response.data;
