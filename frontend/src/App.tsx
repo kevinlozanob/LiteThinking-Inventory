@@ -1,9 +1,53 @@
-import Login from "./pages/Login";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <div>Cargando...</div>;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Componente para redireccionar si ya está logueado
+const PublicRoute = ({ children }: { children: JSX.Element }) => {
+    const { isAuthenticated } = useAuth();
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
+    return children;
+}
 function App() {
   return (
-    <Login />
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Ruta Pública (Login)*/}
+          <Route path="/login" element={
+              <PublicRoute>
+                  <Login />
+              </PublicRoute>
+          } />
+
+          {/* Ruta JWT (Dashboard) */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Ruta defauly */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
