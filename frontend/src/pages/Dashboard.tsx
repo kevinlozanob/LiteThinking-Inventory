@@ -5,7 +5,7 @@ import { EmpresaList } from '../components/organisms/EmpresaList';
 import { AddEmpresaForm } from '../components/organisms/AddEmpresaForm';
 
 export default function Dashboard() {
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [refreshList, setRefreshList] = useState(0);
 
@@ -33,7 +33,8 @@ export default function Dashboard() {
               Empresas Registradas
             </h2>
             
-            {!showForm && (
+            {/* CONDICIONAL ADMIN */}
+            {!showForm && isAdmin && (
               <div className="w-48">
                 <Button onClick={() => setShowForm(true)} variant="primary">
                   + Nueva Empresa
@@ -47,7 +48,7 @@ export default function Dashboard() {
             <AddEmpresaForm 
               onSuccess={() => {
                 setShowForm(false);
-                setRefreshList(prev => prev + 1); // Recargo tablar valor
+                setRefreshList(prev => prev + 1); // Recargo tobla
               }}
               onCancel={() => setShowForm(false)}
             />

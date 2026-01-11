@@ -21,13 +21,12 @@ export const LoginForm = () => {
     setLoading(true);
 
     try {
-
       const data = await LoginService(email, password);
       
-      login(data.access);
+      // AQUI EL CAMBIO: Pasamos el token Y el estado de admin
+      login(data.access, data.is_admin);
       
-      console.log("¡Login Exitoso!", data);
-      
+      console.log("Login:", data);
       navigate('/dashboard');
       
     } catch (err: any) {

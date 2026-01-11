@@ -4,10 +4,12 @@ import { getProductos, downloadPDF, type Producto } from '../services/productoSe
 import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { FileText, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function InventoryPage() {
   const { nit } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,9 +51,13 @@ export default function InventoryPage() {
             <Button onClick={downloadPDF} className="w-auto px-4 bg-red-600 hover:bg-red-700 text-white" icon={<FileText size={16}/>}>
                 PDF Global
             </Button>
-            <Button onClick={() => setShowForm(!showForm)} variant="primary" className="w-auto px-4">
-                {showForm ? 'Cerrar Formulario' : '+ Agregar Producto'}
-            </Button>
+            
+            {/* CONDICIONAL: Solo Admin ve el boton de agregar */}
+            {isAdmin && (
+                <Button onClick={() => setShowForm(!showForm)} variant="primary" className="w-auto px-4">
+                    {showForm ? 'Cerrar Formulario' : '+ Agregar Producto'}
+                </Button>
+            )}
           </div>
         </header>
 

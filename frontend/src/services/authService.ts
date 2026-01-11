@@ -4,6 +4,7 @@ import api from './api';
 interface LoginResponse {
   access: string;
   refresh: string;
+  is_admin: boolean;
 }
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
