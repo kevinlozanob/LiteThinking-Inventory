@@ -17,7 +17,6 @@ def generar_pdf_inventario(productos):
     data = [['Código', 'Nombre', 'Empresa', 'Precio (Ref)']]
     
     for prod in productos:
-        print(f"DEBUG: Producto {prod.codigo}, Precios: {prod.precios}, Tipo: {type(prod.precios)}")
         
         precio_str = "N/A"
         

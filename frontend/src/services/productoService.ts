@@ -28,24 +28,26 @@ export const generarDescripcionIA = async (nombre: string): Promise<string> => {
 };
 
 export const downloadPDF = async () => {
-  try {
-    const response = await api.get('productos/descargar_reporte/', {
-      responseType: 'blob', 
-    });
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'inventario_reporte.pdf'); // Nombre del archivo
-    
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    
-  } catch (error) {
-    console.error("Error descargando PDF", error);
-    alert("No se pudo descargar el PDF. Revisa permisos o conexión.");
-  }
+  const response = await api.get('productos/descargar_reporte/', {
+    responseType: 'blob', 
+  });
+
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'inventario_reporte.pdf'); 
+  
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+export const sendEmailReport = async (email: string) => {
+  const response = await api.post('productos/enviar_reporte_email/', {
+    email: email
+  });
+  return response.data;
 };
