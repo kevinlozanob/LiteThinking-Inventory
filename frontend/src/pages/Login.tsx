@@ -18,7 +18,7 @@ export default function Login() {
       <div className="mt-4 text-center text-sm text-white">
         ¿Aún no tienes tu cuenta Lite Thinking?
         <br />
-        <a href="#" className="font-bold hover:text-[#E6C200] underline">
+        <a href="/register" className="font-bold hover:text-[#E6C200] underline">
           Crea tu cuenta
         </a>
       </div>

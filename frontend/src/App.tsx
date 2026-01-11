@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -34,7 +35,12 @@ function App() {
                   <Login />
               </PublicRoute>
           } />
-
+          {/* Registro */}
+           <Route path="/register" element={
+              <PublicRoute>
+                  <Register />
+              </PublicRoute>
+          } />
           {/* Ruta JWT (Dashboard) */}
           <Route path="/dashboard" element={
             <ProtectedRoute>

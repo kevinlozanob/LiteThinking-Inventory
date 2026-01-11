@@ -4,10 +4,10 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from .views import UserRegistrationView
+
 urlpatterns = [
-    # Endpoint para iniciar sesión (recibe email/password, retorna access/refresh tokens)
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    
-    # Endpoint para refrescar el token cuando caduca
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('register/', UserRegistrationView.as_view(), name='register'),
 ]

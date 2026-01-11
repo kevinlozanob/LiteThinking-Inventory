@@ -9,18 +9,20 @@ from .serializers import EmpresaSerializer, ProductoSerializer
 
 
 from .reports import generar_pdf_inventario   
-from .ai import generar_descripcion_ia        
+from .ai import generar_descripcion_ia     
+
+from .permissions import IsAdminOrReadOnly   
 # --------------------------------------
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = EmpresaModel.objects.all()
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly] 
+    permission_classes = [IsAdminOrReadOnly] 
 
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     
     # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])
