@@ -21,8 +21,8 @@ from decouple import config
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = EmpresaModel.objects.all()
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAdminOrReadOnly] 
-
+    permission_classes = [IsAdminOrReadOnly]
+    lookup_value_regex = '[^/]+'
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
