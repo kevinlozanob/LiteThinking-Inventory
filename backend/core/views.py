@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated 
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import FileResponse
@@ -46,7 +46,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
             
         texto = generar_descripcion_ia(nombre, caracteristicas)
         return Response({"descripcion": texto})
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def enviar_reporte_email(self, request):
 
         email_destino = request.data.get('email')
