@@ -21,3 +21,7 @@ export const createEmpresa = async (data: Empresa): Promise<Empresa> => {
   const response = await api.post<Empresa>('empresas/', data);
   return response.data;
 };
+
+export const deleteEmpresa = async (nit: string): Promise<void> => {
+  await api.delete(`empresas/${nit}/`);
+};
