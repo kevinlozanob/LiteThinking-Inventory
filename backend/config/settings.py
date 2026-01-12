@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     "users",
     "core",
     'corsheaders',
+    'drf_spectacular',
+    
 ]
 
 REST_FRAMEWORK = {
@@ -36,6 +38,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -44,6 +47,14 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Lite Thinking API',
+    'DESCRIPTION': 'Documentación técnica de la prueba Lite Thinking hecha por Nicklcs',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    #'COMPONENT_SPLIT_REQUEST': True,
 }
 
 MIDDLEWARE = [

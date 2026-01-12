@@ -1,16 +1,12 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated 
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import FileResponse
-
 from django.db import connection
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
 
 from .models import EmpresaModel, ProductoModel
-from .serializers import EmpresaSerializer, ProductoSerializer
-
+from .serializers import EmpresaSerializer, ProductoSerializer, SystemStatusSerializer
 
 from .reports import generar_pdf_inventario   
 from .ai import generar_descripcion_ia     
@@ -39,7 +35,6 @@ class ProductoViewSet(viewsets.ModelViewSet):
         buffer = generar_pdf_inventario(productos)
         return FileResponse(buffer, as_attachment=True, filename='inventario.pdf')
 
-    # Endpoint para AI
     @action(detail=False, methods=['post'])
     def generar_descripcion(self, request):
         nombre = request.data.get('nombre')
@@ -102,28 +97,31 @@ class ProductoViewSet(viewsets.ModelViewSet):
                 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def system_status(request):
-    """
-    Endpoint para verificar la salud del sistema y la conexión a la BD.
-    """
-    status_data = {
-        "api": "Lite Thinking Backend",
-        "version": "1.0.0",
-        "status": "Online",
-        "database": "Checking..."
-    }
-    
-    status_code = 200
+class SystemViewSet(viewsets.GenericViewSet):
+    permission_classes = [AllowAny]
+    serializer_class = SystemStatusSerializer
 
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-        status_data["database"] = "Connected"
-    except Exception as e:
-        status_data["database"] = "Disconnected"
-        status_data["error"] = str(e)
-        status_code = 503
+    def list(self, request):
+        """
+        Retorna el estado del sistema y la conexión a la base de datos.
+        """
+        status_data = {
+            "api": "Lite Thinking Backend",
+            "version": "1.0.0",
+            "status": "Online",
+            "database": "Checking..."
+        }
+        
+        status_code = 200
 
-    return Response(status_data, status=status_code)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            status_data["database"] = "Connected"
+        except Exception as e:
+            status_data["database"] = "Disconnected"
+            status_data["error"] = str(e)
+            status_code = 503
+
+        serializer = self.get_serializer(status_data)
+        return Response(serializer.data, status=status_code)

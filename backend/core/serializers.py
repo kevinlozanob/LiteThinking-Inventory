@@ -17,3 +17,9 @@ class ProductoSerializer(serializers.ModelSerializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("El campo precios debe ser un objeto JSON (diccionario).")
         return value
+class SystemStatusSerializer(serializers.Serializer):
+    api = serializers.CharField()
+    version = serializers.CharField()
+    status = serializers.CharField()
+    database = serializers.CharField()
+    error = serializers.CharField(required=False)
