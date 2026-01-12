@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductos, deleteProducto, downloadPDF, sendEmailReport, type Producto } from '../services/productoService';
+import { getProductos, deleteProducto, downloadPDF, sendEmailReport, updateProducto, type Producto } from '../services/productoService';
 import { getEmpresaByNit, type Empresa } from '../services/empresaService'; 
 import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
+import { EditProductModal } from '../components/organisms/EditProductModal'; // Importar Modal
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2 } from 'lucide-react'; 
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil } from 'lucide-react'; // Importar Pencil
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
 import { ConfirmModal } from '../components/atoms/ConfirmModal';
@@ -21,15 +22,19 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
-  // Estado para el modal de email
+  // LOGICA MODAL EMAIL
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
-  // Estado para el modal de eliminación de productos
+  // LOGICA MODAL ELIMINAR
   const [itemToDelete, setItemToDelete] = useState<{ isOpen: boolean; id: number; nombre: string }>({
     isOpen: false, id: 0, nombre: ''
   });
   const [deletingProduct, setDeletingProduct] = useState(false);
+
+  // LOGICA MODAL EDITAR
+  const [itemToEdit, setItemToEdit] = useState<Producto | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (nit) {
@@ -56,7 +61,8 @@ export default function InventoryPage() {
     }
   };
   
-  // LÓGICA DE ENVÍO DE EMAIL
+  // --- HANDLERS ---
+
   const handleSendEmailSubmit = async (email: string) => {
     setSendingEmail(true);
     try {
@@ -71,7 +77,6 @@ export default function InventoryPage() {
     }
   };
 
-  // LÓGICA DE DESCARGA PDF
   const handleDownloadPDF = async () => {
       try {
           await downloadPDF();
@@ -81,12 +86,10 @@ export default function InventoryPage() {
       }
   };
 
-  // LÓGICA DE ELIMINACIÓN DE PRODUCTO
   const confirmDeleteProduct = async () => {
     setDeletingProduct(true);
     try {
       await deleteProducto(itemToDelete.id);
-      // Eliminar optimista de la UI
       setProductos(prev => prev.filter(p => p.id !== itemToDelete.id));
       showToast("Producto eliminado correctamente", "success");
       setItemToDelete({ isOpen: false, id: 0, nombre: '' });
@@ -98,10 +101,33 @@ export default function InventoryPage() {
     }
   };
 
+  // NUEVO: Handler para actualizar producto
+  const handleUpdateProduct = async (id: number, data: Partial<Producto>) => {
+    try {
+        const updatedProduct = await updateProducto(id, data);
+        
+        // Actualizar estado local
+        setProductos(prev => prev.map(p => (p.id === id ? updatedProduct : p)));
+        
+        showToast("Producto actualizado correctamente", "success");
+        setIsEditModalOpen(false);
+        setItemToEdit(null);
+    } catch (error) {
+        console.error("Error update:", error);
+        showToast("No se pudo actualizar el producto", "error");
+        throw error; // Para que el modal sepa que falló
+    }
+  };
+
+  const openEditModal = (producto: Producto) => {
+      setItemToEdit(producto);
+      setIsEditModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
       
-      {/* MODAL DE EMAIL */}
+      {/* MODALES */}
       <EmailModal 
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
@@ -109,7 +135,6 @@ export default function InventoryPage() {
         loading={sendingEmail}
       />
 
-      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
       <ConfirmModal
         isOpen={itemToDelete.isOpen}
         title="Eliminar Producto"
@@ -117,6 +142,13 @@ export default function InventoryPage() {
         onConfirm={confirmDeleteProduct}
         onCancel={() => setItemToDelete({ isOpen: false, id: 0, nombre: '' })}
         loading={deletingProduct}
+      />
+
+      <EditProductModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        product={itemToEdit}
+        onUpdate={handleUpdateProduct}
       />
 
       <div className="max-w-6xl mx-auto">
@@ -210,7 +242,14 @@ export default function InventoryPage() {
                                       ))}
                                   </td>
                                   {isAdmin && (
-                                    <td className="px-4 lg:px-6 py-4 text-right">
+                                    <td className="px-4 lg:px-6 py-4 text-right whitespace-nowrap">
+                                       <button 
+                                         onClick={() => openEditModal(prod)}
+                                         className="text-gray-400 hover:text-blue-600 transition-colors p-1 mr-2"
+                                         title="Editar producto"
+                                       >
+                                         <Pencil size={18}/>
+                                       </button>
                                        <button 
                                          onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
                                          className="text-gray-400 hover:text-red-600 transition-colors p-1"
@@ -236,12 +275,20 @@ export default function InventoryPage() {
                           <p className="text-xs text-gray-500">Código: {prod.codigo}</p>
                         </div>
                         {isAdmin && (
-                            <button 
-                                onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
-                                className="text-gray-300 hover:text-red-500 p-2 -mt-2 -mr-2"
-                            >
-                                <Trash2 size={20}/>
-                            </button>
+                            <div className="flex -mt-2 -mr-2">
+                                <button 
+                                    onClick={() => openEditModal(prod)}
+                                    className="text-gray-300 hover:text-blue-500 p-2"
+                                >
+                                    <Pencil size={20}/>
+                                </button>
+                                <button 
+                                    onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
+                                    className="text-gray-300 hover:text-red-500 p-2"
+                                >
+                                    <Trash2 size={20}/>
+                                </button>
+                            </div>
                         )}
                       </div>
                       <div className="flex justify-between items-end mt-2">

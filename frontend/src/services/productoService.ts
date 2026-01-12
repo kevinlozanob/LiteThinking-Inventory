@@ -55,3 +55,13 @@ export const sendEmailReport = async (email: string) => {
 export const deleteProducto = async (id: number): Promise<void> => {
   await api.delete(`productos/${id}/`);
 };
+export const updateProducto = async (id: number, data: Partial<Producto>): Promise<Producto> => {
+  const payload = { ...data };
+
+  if (!payload.precios || Object.keys(payload.precios).length === 0) {
+      delete payload.precios;
+  }
+
+  const response = await api.patch<Producto>(`productos/${id}/`, payload);
+  return response.data;
+};
