@@ -21,7 +21,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
     try {
       await createEmpresa(formData);
       onSuccess();
-      setFormData({ nit: '', nombre: '', direccion: '', telefono: '' }); // Limpiar
+      setFormData({ nit: '', nombre: '', direccion: '', telefono: '' });
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 403) {
@@ -71,6 +71,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
            <Button 
             type="button"  
             onClick={onCancel} 
+            variant="secondary"
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 w-full sm:w-auto px-6"
            >
             Cancelar
@@ -79,7 +80,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
             type="submit" 
             variant="primary" 
             disabled={loading}
-            className="w-full sm:flex-1" // Ocupa todo el ancho en móvil, y el espacio restante en PC
+            className="w-full sm:flex-1"
           >
             {loading ? "Guardando..." : "Guardar Empresa"}
           </Button>

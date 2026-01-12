@@ -540,7 +540,7 @@ def generar_pdf_inventario(productos, info_empresa_backup=None):
         chars = p.caracteristicas[:40] + "..." if len(p.caracteristicas) > 40 else p.caracteristicas
         
         precio_txt = "N/A"
-        if p.precios:
+        if p.precios and isinstance(p.precios, dict) and len(p.precios) > 0:
             k = list(p.precios.keys())[0]
             v = p.precios[k]
             precio_txt = f"{k} {v:,.0f}"
@@ -938,6 +938,13 @@ class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAdminOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        empresa_nit = self.request.query_params.get('empresa')
+        if empresa_nit:
+            queryset = queryset.filter(empresa_id=empresa_nit)
+        return queryset
 
     # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])
@@ -1838,17 +1845,31 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\atoms\Butto
 ========================================
 import React from 'react';
 
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline' | 'social';
+
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'social';
+  variant?: ButtonVariant;
   icon?: React.ReactNode;
 }
 
 export const Button = ({ children, className = '', variant = 'primary', icon, ...props }: ButtonProps) => {
-  const baseStyles = "w-full rounded h-[42px] sm:h-[46px] text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 sm:gap-3";
+  const baseStyles = "w-full rounded-lg h-[44px] sm:h-[48px] text-xs sm:text-sm font-bold transition-all duration-200 ease-out flex items-center justify-center gap-2 sm:gap-3 shadow-sm active:scale-[0.98]";
   
   const variants = {
-    primary: "bg-[#E6C200] text-black uppercase tracking-wide hover:bg-[#d4b000] active:scale-[0.98] mt-1",
-    social: "bg-white text-gray-800 hover:bg-gray-100 border border-transparent"
+    // ðŸŸ¡ PRIMARY: El amarillo con efecto invertido (Solo este hace el truco)
+    primary: "bg-[#E6C200] text-black uppercase tracking-wide border-2 border-[#E6C200] hover:bg-white hover:text-[#E6C200] hover:shadow-md hover:-translate-y-0.5",
+    
+    // âšª SECONDARY: Gris para "Cancelar" (Sin efecto amarillo)
+    secondary: "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200",
+    
+    // ðŸ”´ DANGER: Rojo para "Eliminar" o "PDF"
+    danger: "bg-red-600 text-white border-2 border-transparent hover:bg-red-700 hover:shadow-md",
+    
+    // ðŸŸ¦ OUTLINE: Fondo blanco con borde (Para "Volver")
+    outline: "bg-white text-gray-600 border-2 border-gray-200 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50",
+    
+    // ðŸŒ SOCIAL: Google/Facebook
+    social: "bg-white text-gray-700 border border-gray-200 hover:border-gray-400 hover:bg-gray-50"
   };
 
   return (
@@ -1917,6 +1938,7 @@ export const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, load
           </Button>
           <Button 
             onClick={onConfirm}
+            variant="danger"
             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
             disabled={loading}
           >
@@ -2028,7 +2050,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <input
         ref={ref}
-        className={`w-full rounded h-[42px] sm:h-[46px] px-3 sm:px-4 text-gray-700 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#E6C200] text-sm transition-all ${className}`}
+        className={`
+            w-full rounded-lg h-[44px] sm:h-[48px] px-4 
+            text-gray-800 bg-white border border-gray-200
+            placeholder-gray-400 text-sm transition-all duration-300
+            focus:outline-none focus:border-[#E6C200] focus:ring-4 focus:ring-[#E6C200]/20 
+            hover:border-gray-300
+            ${className}
+        `}
         {...props}
       />
     );
@@ -2194,6 +2223,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
            <Button 
             type="button"  
             onClick={onCancel} 
+            variant="secondary"
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 w-full sm:w-auto px-6"
            >
             Cancelar
@@ -2488,6 +2518,7 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\organisms\E
 import React, { useState, useEffect } from 'react';
 import { X, Save, DollarSign } from 'lucide-react';
 import { Button } from '../atoms/Button';
+import { Input } from '../atoms/Input';
 import { type Producto } from '../../services/productoService';
 
 interface EditProductModalProps {
@@ -2513,16 +2544,16 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
         caracteristicas: product.caracteristicas,
       });
 
-      // LÃ“GICA: Extraer el primer precio que encuentre para mostrarlo
+      // LÃ“GICA: Extraer el primer precio que encuentre
       const precios = product.precios || {};
       const monedas = Object.keys(precios);
 
       if (monedas.length > 0) {
-        const monedaActual = monedas[0]; // Ej: 'COP'
+        const monedaActual = monedas[0];
         setCurrency(monedaActual);
         setPrice(precios[monedaActual]);
       } else {
-        setCurrency('COP'); // Default si es nuevo o no tiene precio
+        setCurrency('COP');
         setPrice('');
       }
     }
@@ -2534,7 +2565,6 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
     e.preventDefault();
     setLoading(true);
     
-    // Construimos el objeto de precios: { "COP": 50000 }
     const finalPrice = price === '' ? 0 : parseFloat(price.toString());
     
     const preciosPayload = {
@@ -2558,23 +2588,23 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-[fadeIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Editar Producto</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-4 sm:p-6 animate-[fadeIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+               Editar Producto
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
               <X size={24} />
             </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto pr-2 space-y-5">
+        <form onSubmit={handleSubmit} className="overflow-y-auto pr-1 space-y-4 sm:space-y-5 custom-scrollbar">
             {/* Campos BÃ¡sicos */}
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre</label>
-                <input
-                    type="text"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">Nombre</label>
+                <Input
                     value={formData.nombre || ''}
                     onChange={e => setFormData({...formData, nombre: e.target.value})}
                     required
@@ -2582,10 +2612,8 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
             </div>
 
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">CÃ³digo</label>
-                <input
-                    type="text"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">CÃ³digo</label>
+                <Input
                     value={formData.codigo || ''}
                     onChange={e => setFormData({...formData, codigo: e.target.value})}
                     required
@@ -2593,9 +2621,9 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
             </div>
 
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">CaracterÃ­sticas</label>
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">CaracterÃ­sticas</label>
                 <textarea 
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E6C200] transition-all resize-none placeholder-gray-400"
                     rows={3}
                     value={formData.caracteristicas || ''}
                     onChange={e => setFormData({...formData, caracteristicas: e.target.value})}
@@ -2604,17 +2632,17 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
 
             {/* SecciÃ³n de Precio Simplificada */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <DollarSign size={18} className="text-green-600"/> 
+                <label className="text-xs sm:text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <DollarSign size={16} className="text-green-600"/> 
                     Precio y Moneda
                 </label>
                 
                 <div className="flex gap-3">
                     {/* Lista desplegable de la moneda */}
                     <div className="w-1/3">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Moneda</label>
+                        <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Moneda</label>
                         <select 
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none cursor-pointer"
+                            className="w-full rounded-lg h-[42px] sm:h-[46px] border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E6C200] cursor-pointer"
                             value={currency}
                             onChange={(e) => setCurrency(e.target.value)}
                         >
@@ -2627,13 +2655,13 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
 
                     {/* Input del valor */}
                     <div className="w-2/3">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Valor</label>
+                        <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Valor</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">$</span>
                             <input
                                 type="number"
                                 step="0.01"
-                                className="w-full rounded-lg border border-gray-300 pl-7 pr-4 py-2.5 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all font-semibold"
+                                className="w-full rounded-lg h-[42px] sm:h-[46px] border border-gray-200 pl-7 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#E6C200] transition-all font-semibold"
                                 placeholder="0.00"
                                 value={price}
                                 onChange={(e) => setPrice(e.target.value)}
@@ -2644,11 +2672,21 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
                 </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <Button type="button" onClick={onClose} className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200">
+            {/* Footer de Botones */}
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100 mt-2">
+                <Button 
+                    type="button" 
+                    onClick={onClose} 
+                    className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 border-transparent"
+                >
                     Cancelar
                 </Button>
-                <Button type="submit" disabled={loading} className="flex-1" icon={<Save size={18}/>}>
+                <Button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="flex-1" 
+                    icon={<Save size={18}/>}
+                >
                     {loading ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
             </div>
@@ -2664,7 +2702,7 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\organisms\E
 import { useEffect, useState } from 'react';
 import { getEmpresas, deleteEmpresa, updateEmpresa, type Empresa } from '../../services/empresaService';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Building2, Trash2, Pencil } from 'lucide-react';
+import { ChevronRight, Building2, Trash2, Pencil, MapPin, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmModal } from '../atoms/ConfirmModal';
@@ -2678,13 +2716,10 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para eliminar
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; nit: string; nombre: string }>({
     isOpen: false, nit: '', nombre: ''
   });
   const [deleting, setDeleting] = useState(false);
-
-  // Estado para editar
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
   
@@ -2702,15 +2737,14 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
       setEmpresas(data);
     } catch (err) {
       console.error(err);
-      showToast("Error cargando las empresas", "error");
+      showToast("Error cargando empresas", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- LOGICA EDITAR ---
   const openEditModal = (e: React.MouseEvent, empresa: Empresa) => {
-    e.stopPropagation(); // Evitar navegar al detalle
+    e.stopPropagation();
     setEmpresaToEdit(empresa);
     setEditModalOpen(true);
   };
@@ -2718,20 +2752,15 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
   const handleUpdateEmpresa = async (nit: string, data: Partial<Empresa>) => {
     try {
         const updated = await updateEmpresa(nit, data);
-        
-        // Actualizar estado local para reflejar cambios sin recargar
         setEmpresas(prev => prev.map(emp => emp.nit === nit ? updated : emp));
-        
-        showToast("Empresa actualizada correctamente", "success");
+        showToast("Empresa actualizada", "success");
         setEditModalOpen(false);
         setEmpresaToEdit(null);
     } catch (error) {
-        showToast("No se pudo actualizar la empresa", "error");
-        throw error;
+        showToast("Error al actualizar", "error");
     }
   };
 
-  // --- LOGICA ELIMINAR ---
   const openDeleteModal = (e: React.MouseEvent, nit: string, nombre: string) => {
     e.stopPropagation();
     setDeleteModal({ isOpen: true, nit, nombre });
@@ -2742,25 +2771,27 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
     try {
       await deleteEmpresa(deleteModal.nit);
       setEmpresas(prev => prev.filter(emp => emp.nit !== deleteModal.nit));
-      showToast("Empresa eliminada correctamente", "success");
+      showToast("Empresa eliminada", "success");
       setDeleteModal({ isOpen: false, nit: '', nombre: '' });
     } catch (error) {
-      console.error(error);
-      showToast("No se pudo eliminar la empresa.", "error");
+      showToast("Error al eliminar", "error");
     } finally {
       setDeleting(false);
     }
   };
 
-  if (loading) return <div className="p-4 text-center text-gray-400">Cargando empresas...</div>;
+  if (loading) return (
+      <div className="flex justify-center p-12">
+          <div className="w-8 h-8 border-4 border-[#E6C200] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+  );
 
   return (
     <>
-      {/* MODALES */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Eliminar Empresa"
-        message={`Â¿EstÃ¡s seguro de eliminar "${deleteModal.nombre}"? Esta acciÃ³n eliminarÃ¡ todos sus productos y no se puede deshacer.`}
+        message={`Â¿Borrar "${deleteModal.nombre}" y todo su inventario?`}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteModal({ isOpen: false, nit: '', nombre: '' })}
         loading={deleting}
@@ -2773,54 +2804,57 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
         onUpdate={handleUpdateEmpresa}
       />
 
-      <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
-        {/* Vista Desktop - Tabla */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        
+        {/* DESKTOP TABLE */}
         <div className="hidden sm:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">NIT</th>
-                <th className="px-4 md:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">NOMBRE</th>
-                <th className="px-4 md:px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">ACCIÃ“N</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Empresa / NIT</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Contacto</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-100">
               {empresas.map((empresa) => (
-                <tr key={empresa.nit} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{empresa.nit}</td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{empresa.nombre}</td>
-                  <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end items-center gap-2">
-                       {/* BotÃ³n Ver */}
-                      <button 
-                        onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
-                        className="text-[#d8b600] hover:text-[#bfa100] font-bold p-2 mr-2"
-                        title="Ver Inventario"
-                      >
-                         <ChevronRight size={20}/>
-                      </button>
-                      
+                <tr 
+                    key={empresa.nit} 
+                    className="group hover:bg-[#FFFDF0] transition-colors duration-200 cursor-pointer"
+                    onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-[#E6C200] group-hover:text-black transition-colors">
+                            <Building2 size={18}/>
+                        </div>
+                        <div>
+                            <div className="text-sm font-bold text-gray-900">{empresa.nombre}</div>
+                            <div className="text-xs text-gray-400 font-mono">{empresa.nit}</div>
+                        </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-600 flex flex-col gap-1">
+                        <span className="flex items-center gap-1.5"><MapPin size={12} className="text-gray-400"/> {empresa.direccion}</span>
+                        <span className="flex items-center gap-1.5"><Phone size={12} className="text-gray-400"/> {empresa.telefono}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {isAdmin && (
                         <>
-                            {/* BotÃ³n Editar */}
-                            <button 
-                                onClick={(e) => openEditModal(e, empresa)}
-                                className="text-gray-400 hover:text-blue-600 transition-colors p-2"
-                                title="Editar Empresa"
-                            >
-                                <Pencil size={18}/>
+                            <button onClick={(e) => openEditModal(e, empresa)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
+                                <Pencil size={16}/>
                             </button>
-                            
-                            {/* BotÃ³n Eliminar */}
-                            <button 
-                                onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
-                                className="text-gray-400 hover:text-red-600 transition-colors p-2"
-                                title="Eliminar Empresa"
-                            >
-                                <Trash2 size={18}/>
+                            <button onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all">
+                                <Trash2 size={16}/>
                             </button>
                         </>
                       )}
+                      <button className="p-2 text-[#E6C200] hover:bg-yellow-50 rounded-full">
+                         <ChevronRight size={20}/>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -2829,44 +2863,41 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
           </table>
         </div>
 
-        {/* Vista Mobile - Cards */}
-        <div className="sm:hidden divide-y divide-gray-200">
+        {/* MOBILE CARDS*/}
+        <div className="sm:hidden flex flex-col gap-3 p-3 bg-gray-50">
           {empresas.map((empresa) => (
             <div 
               key={empresa.nit} 
               onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
-              className="p-4 hover:bg-gray-50 transition-colors cursor-pointer active:bg-gray-100"
+              className="bg-white p-4 rounded-xl shadow-sm border border-transparent hover:border-[#E6C200] transition-all duration-300 active:scale-[0.98]"
             >
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#E6C200]/10 rounded-full flex items-center justify-center shrink-0">
-                    <Building2 size={20} className="text-[#d8b600]"/>
+                  <div className="w-10 h-10 bg-[#E6C200]/20 rounded-xl flex items-center justify-center text-[#998100]">
+                    <Building2 size={20} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-sm">{empresa.nombre}</p>
-                    <p className="text-xs text-gray-500">NIT: {empresa.nit}</p>
+                    <h3 className="font-bold text-gray-900">{empresa.nombre}</h3>
+                    <p className="text-xs text-gray-500 font-mono">{empresa.nit}</p>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-1">
-                  {isAdmin && (
-                    <>
-                         <button 
-                            onClick={(e) => openEditModal(e, empresa)}
-                            className="text-gray-300 hover:text-blue-500 p-2"
-                        >
-                            <Pencil size={20}/>
-                        </button>
-                        <button 
-                            onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
-                            className="text-gray-300 hover:text-red-500 p-2"
-                        >
-                            <Trash2 size={20}/>
-                        </button>
-                    </>
-                  )}
-                  <ChevronRight size={20} className="text-gray-400 ml-1"/>
-                </div>
+                {isAdmin && (
+                    <button onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} className="text-gray-300 p-1">
+                        <XIconMini />
+                    </button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4 text-xs text-gray-500 mb-3 pl-1">
+                  <span className="flex items-center gap-1"><MapPin size={12}/> {empresa.direccion}</span>
+                  <span className="flex items-center gap-1"><Phone size={12}/> {empresa.telefono}</span>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <span className="text-xs font-semibold text-[#E6C200]">Ver Inventario</span>
+                  <div className="bg-gray-50 p-1 rounded-full">
+                    <ChevronRight size={16} className="text-gray-400"/>
+                  </div>
               </div>
             </div>
           ))}
@@ -2874,15 +2905,20 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
 
         {/* Empty State */}
         {empresas.length === 0 && (
-          <div className="px-6 py-8 text-center text-gray-500">
-            <Building2 size={32} className="mx-auto mb-2 opacity-20"/>
-            <p>No hay empresas registradas.</p>
+          <div className="p-10 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 size={32} className="text-gray-300"/>
+            </div>
+            <p className="text-gray-500 font-medium">No hay empresas registradas.</p>
+            {isAdmin && <p className="text-xs text-gray-400 mt-1">Dale click al botÃ³n "Nueva Empresa" arriba.</p>}
           </div>
         )}
       </div>
     </>
   );
 };
+
+const XIconMini = () => <Trash2 size={16} className="hover:text-red-500 transition-colors"/>
 
 ========================================
 ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\organisms\LoginForm.tsx
@@ -3359,14 +3395,13 @@ export default function InventoryPage() {
   const cargarDataCompuesto = async () => {
     setLoading(true);
     try {
-      const [empresaData, allProductos] = await Promise.all([
+      const [empresaData, productosYaFiltrados] = await Promise.all([
         getEmpresaByNit(nit!),
-        getProductos()
+        getProductos(nit!)
       ]);
       
       setEmpresaInfo(empresaData);
-      const filtrados = allProductos.filter(p => String(p.empresa) === String(nit));
-      setProductos(filtrados);
+      setProductos(productosYaFiltrados); 
     } catch (error) {
       console.error(error);
       showToast("Error cargando el inventario de la empresa", 'error');
@@ -3468,6 +3503,7 @@ export default function InventoryPage() {
       <div className="max-w-6xl mx-auto">
         <Button 
             onClick={() => navigate('/dashboard')} 
+            variant="outline"
             className="w-full sm:w-auto px-4 mb-4 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
             icon={<ArrowLeft size={16}/>}
         >
@@ -3486,6 +3522,7 @@ export default function InventoryPage() {
           
           <div className="grid grid-cols-2 sm:flex gap-2 w-full lg:w-auto">
             <Button 
+              variant="danger"
               onClick={handleDownloadPDF} 
               className="w-full sm:w-auto px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm" 
               icon={<FileText size={14} className="sm:w-4 sm:h-4"/>}
@@ -3829,8 +3866,9 @@ export interface Producto {
   precios: Record<string, number>;
 }
 
-export const getProductos = async (): Promise<Producto[]> => {
-  const response = await api.get<Producto[]>('productos/');
+export const getProductos = async (nit?: string): Promise<Producto[]> => {
+  const url = nit ? `productos/?empresa=${nit}` : 'productos/';
+  const response = await api.get<Producto[]>(url);
   return response.data;
 };
 

@@ -53,6 +53,7 @@ export const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, load
           </Button>
           <Button 
             onClick={onConfirm}
+            variant="danger"
             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
             disabled={loading}
           >

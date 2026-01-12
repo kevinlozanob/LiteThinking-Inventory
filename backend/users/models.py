@@ -19,7 +19,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, verbose_name="Correo Electrónico")
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False) # Para saber si es Administrador
+    is_staff = models.BooleanField(default=False)
 
     objects = UserManager()
 

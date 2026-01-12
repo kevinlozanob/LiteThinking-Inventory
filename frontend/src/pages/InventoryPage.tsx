@@ -100,12 +100,10 @@ export default function InventoryPage() {
     }
   };
 
-  // NUEVO: Handler para actualizar producto
   const handleUpdateProduct = async (id: number, data: Partial<Producto>) => {
     try {
         const updatedProduct = await updateProducto(id, data);
         
-        // Actualizar estado local
         setProductos(prev => prev.map(p => (p.id === id ? updatedProduct : p)));
         
         showToast("Producto actualizado correctamente", "success");
@@ -114,7 +112,7 @@ export default function InventoryPage() {
     } catch (error) {
         console.error("Error update:", error);
         showToast("No se pudo actualizar el producto", "error");
-        throw error; // Para que el modal sepa que falló
+        throw error;
     }
   };
 
@@ -153,6 +151,7 @@ export default function InventoryPage() {
       <div className="max-w-6xl mx-auto">
         <Button 
             onClick={() => navigate('/dashboard')} 
+            variant="outline"
             className="w-full sm:w-auto px-4 mb-4 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
             icon={<ArrowLeft size={16}/>}
         >
@@ -171,6 +170,7 @@ export default function InventoryPage() {
           
           <div className="grid grid-cols-2 sm:flex gap-2 w-full lg:w-auto">
             <Button 
+              variant="danger"
               onClick={handleDownloadPDF} 
               className="w-full sm:w-auto px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm" 
               icon={<FileText size={14} className="sm:w-4 sm:h-4"/>}

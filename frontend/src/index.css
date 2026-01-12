@@ -30,13 +30,11 @@
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* Inputs más fáciles de tocar */
   input, select, textarea {
-    font-size: 16px !important; /* Evita zoom en iOS */
+    font-size: 16px !important;
   }
 }
 
-/* Scrollbar sutil */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
