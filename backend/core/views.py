@@ -12,6 +12,8 @@ from .reports import generar_pdf_inventario
 from .ai import generar_descripcion_ia     
 from .permissions import IsAdminOrReadOnly   
 
+from .utils import get_email_template
+
 import requests 
 import base64   
 from decouple import config 
@@ -47,7 +49,6 @@ class ProductoViewSet(viewsets.ModelViewSet):
         return Response({"descripcion": texto})
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def enviar_reporte_email(self, request):
-
         email_destino = request.data.get('email')
         
         if not email_destino:
@@ -63,21 +64,23 @@ class ProductoViewSet(viewsets.ModelViewSet):
         sender_email = config('RESEND_FROM_EMAIL', default='') 
 
         if not resend_api_key:
-             return Response({"error": "Falta configuración de API Key en servidor"}, status=500)
+             print(f"MOCK EMAIL TO: {email_destino}")
+             return Response({"message": "Correo simulado (Falta API Key)"})
 
         url = "https://api.resend.com/emails"
         
+        html_body = get_email_template(email_destino)
+
         payload = {
             "from": f"Lite Thinking <{sender_email}>",
             "to": [email_destino],
             "subject": "Reporte de Inventario - Lite Thinking",
-            "html": "<p>Adjunto encontrarás el reporte actual del inventario generado automáticamente.</p>",
+            "html": html_body,
             "attachments": [
                 {
                     "content": pdf_base64,
                     "filename": "inventario.pdf",
-                    "type": "application/pdf" #,
-                    #"disposition": "attachment" 
+                    "type": "application/pdf"
                 }
             ]
         }
@@ -94,6 +97,9 @@ class ProductoViewSet(viewsets.ModelViewSet):
                 return Response({"message": "Correo enviado exitosamente", "id": response.json().get('id')})
             else:
                 return Response({"error": f"Error en Resend: {response.text}"}, status=400)
+                
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
                 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
