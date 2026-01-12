@@ -4,6 +4,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import FileResponse
 
+from django.db import connection
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
 from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer
 
@@ -98,3 +102,28 @@ class ProductoViewSet(viewsets.ModelViewSet):
                 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def system_status(request):
+    """
+    Endpoint para verificar la salud del sistema y la conexión a la BD.
+    """
+    status_data = {
+        "api": "Lite Thinking Backend",
+        "version": "1.0.0",
+        "status": "Online",
+        "database": "Checking..."
+    }
+    
+    status_code = 200
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        status_data["database"] = "Connected"
+    except Exception as e:
+        status_data["database"] = "Disconnected"
+        status_data["error"] = str(e)
+        status_code = 503
+
+    return Response(status_data, status=status_code)
