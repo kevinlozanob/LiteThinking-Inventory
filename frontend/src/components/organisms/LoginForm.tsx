@@ -22,7 +22,9 @@ export const LoginForm = () => {
 
     try {
       const data = await LoginService(email, password);
-      login(data.access, data.is_admin);
+
+      login(data.access, data.is_admin, data.email); 
+      
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Error login:", err);
