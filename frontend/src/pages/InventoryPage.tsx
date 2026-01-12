@@ -7,6 +7,7 @@ import { AddProductForm } from '../components/organisms/AddProductForm';
 import { useAuth } from '../context/AuthContext';
 import { FileText, ArrowLeft, Mail, Send, Plus, Package } from 'lucide-react'; 
 import { useToast } from '../context/ToastContext';
+import { EmailModal } from '../components/atoms/EmailModal';
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -18,6 +19,9 @@ export default function InventoryPage() {
   const [empresaInfo, setEmpresaInfo] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  
+  // 2. NUEVOS ESTADOS PARA EL MODAL
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
@@ -45,17 +49,17 @@ export default function InventoryPage() {
     }
   };
   
-  const handleSendEmail = async () => {
-    const email = prompt("Ingrese el correo destino:", "usuario@ejemplo.com");
-    if (!email) return;
-
+  // 3. LÓGICA DE ENVÍO REFACTORIZADA
+  // Esta función se ejecuta cuando el usuario da click en "Enviar" dentro del modal
+  const handleSendEmailSubmit = async (email: string) => {
     setSendingEmail(true);
     try {
         await sendEmailReport(email);
         showToast(`Reporte enviado correctamente a ${email}`, 'success'); 
+        setIsEmailModalOpen(false); // Cerrar modal al tener éxito
     } catch (error) {
         console.error(error);
-        showToast("Hubo un error enviando el correo. Verifique la consola.", 'error');
+        showToast("Hubo un error enviando el correo.", 'error');
     } finally {
         setSendingEmail(false);
     }
@@ -72,6 +76,15 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
+      
+      {/* 4. INSERTAR EL MODAL EN EL JSX */}
+      <EmailModal 
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        onSubmit={handleSendEmailSubmit}
+        loading={sendingEmail}
+      />
+
       <div className="max-w-6xl mx-auto">
         {/* Botón volver */}
         <Button 
@@ -104,8 +117,9 @@ export default function InventoryPage() {
                 <span className="xs:hidden">PDF</span>
             </Button>
 
+            {/* 5. ACTUALIZAR BOTÓN DE EMAIL PARA ABRIR EL MODAL */}
             <Button 
-                onClick={handleSendEmail} 
+                onClick={() => setIsEmailModalOpen(true)} 
                 className="w-full sm:w-auto px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" 
                 disabled={sendingEmail}
                 icon={sendingEmail ? <Send size={14} className="animate-pulse"/> : <Mail size={14}/>}
