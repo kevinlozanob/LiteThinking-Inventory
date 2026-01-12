@@ -1,8 +1,25 @@
+import { useEffect, useRef} from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AuthTemplate } from '../components/templates/AuthTemplate';
 import { LoginForm } from '../components/organisms/LoginForm';
 import { SocialLogin } from '../components/organisms/SocialLogin';
+import { useToast } from '../context/ToastContext';
 
 export default function Login() {
+  const [searchParams] = useSearchParams();
+  const { showToast } = useToast();
+  const toastShown = useRef(false);
+
+
+  useEffect(() => {
+    if (searchParams.get('expired') === 'true' && !toastShown.current) {
+        showToast("Tu sesión ha caducado. Por favor inicia sesión nuevamente.", "info");
+        toastShown.current = true;
+        
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   return (
     <AuthTemplate>
       <h2 className="mb-4 sm:mb-6 text-center text-lg sm:text-xl font-bold text-white">
