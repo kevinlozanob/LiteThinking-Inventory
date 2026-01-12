@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductos, downloadPDF, sendEmailReport, type Producto } from '../services/productoService';
+import { getProductos, deleteProducto, downloadPDF, sendEmailReport, type Producto } from '../services/productoService';
 import { getEmpresaByNit, type Empresa } from '../services/empresaService'; 
 import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package } from 'lucide-react'; 
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2 } from 'lucide-react'; 
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
+import { ConfirmModal } from '../components/atoms/ConfirmModal';
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -20,9 +21,15 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
-  // 2. NUEVOS ESTADOS PARA EL MODAL
+  // Estado para el modal de email
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Estado para el modal de eliminación de productos
+  const [itemToDelete, setItemToDelete] = useState<{ isOpen: boolean; id: number; nombre: string }>({
+    isOpen: false, id: 0, nombre: ''
+  });
+  const [deletingProduct, setDeletingProduct] = useState(false);
 
   useEffect(() => {
     if (nit) {
@@ -49,14 +56,13 @@ export default function InventoryPage() {
     }
   };
   
-  // 3. LÓGICA DE ENVÍO REFACTORIZADA
-  // Esta función se ejecuta cuando el usuario da click en "Enviar" dentro del modal
+  // LÓGICA DE ENVÍO DE EMAIL
   const handleSendEmailSubmit = async (email: string) => {
     setSendingEmail(true);
     try {
         await sendEmailReport(email);
         showToast(`Reporte enviado correctamente a ${email}`, 'success'); 
-        setIsEmailModalOpen(false); // Cerrar modal al tener éxito
+        setIsEmailModalOpen(false);
     } catch (error) {
         console.error(error);
         showToast("Hubo un error enviando el correo.", 'error');
@@ -65,6 +71,7 @@ export default function InventoryPage() {
     }
   };
 
+  // LÓGICA DE DESCARGA PDF
   const handleDownloadPDF = async () => {
       try {
           await downloadPDF();
@@ -72,12 +79,29 @@ export default function InventoryPage() {
       } catch (e) {
           showToast("Error descargando el PDF", 'error');
       }
-  }
+  };
+
+  // LÓGICA DE ELIMINACIÓN DE PRODUCTO
+  const confirmDeleteProduct = async () => {
+    setDeletingProduct(true);
+    try {
+      await deleteProducto(itemToDelete.id);
+      // Eliminar optimista de la UI
+      setProductos(prev => prev.filter(p => p.id !== itemToDelete.id));
+      showToast("Producto eliminado correctamente", "success");
+      setItemToDelete({ isOpen: false, id: 0, nombre: '' });
+    } catch (error) {
+      console.error(error);
+      showToast("Error eliminando el producto", "error");
+    } finally {
+      setDeletingProduct(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
       
-      {/* 4. INSERTAR EL MODAL EN EL JSX */}
+      {/* MODAL DE EMAIL */}
       <EmailModal 
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
@@ -85,8 +109,17 @@ export default function InventoryPage() {
         loading={sendingEmail}
       />
 
+      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+      <ConfirmModal
+        isOpen={itemToDelete.isOpen}
+        title="Eliminar Producto"
+        message={`¿Estás seguro de eliminar "${itemToDelete.nombre}"? Esta acción no se puede deshacer.`}
+        onConfirm={confirmDeleteProduct}
+        onCancel={() => setItemToDelete({ isOpen: false, id: 0, nombre: '' })}
+        loading={deletingProduct}
+      />
+
       <div className="max-w-6xl mx-auto">
-        {/* Botón volver */}
         <Button 
             onClick={() => navigate('/dashboard')} 
             className="w-full sm:w-auto px-4 mb-4 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
@@ -95,7 +128,6 @@ export default function InventoryPage() {
             Volver a Empresas
         </Button>
 
-        {/* Header Responsive */}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white p-4 sm:p-6 rounded-lg shadow-sm animate-[fadeIn_0.5s_ease-out]">
           <div className="w-full lg:w-auto">
             <h1 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
@@ -106,7 +138,6 @@ export default function InventoryPage() {
             </p>
           </div>
           
-          {/* Botones de acción - Grid responsive */}
           <div className="grid grid-cols-2 sm:flex gap-2 w-full lg:w-auto">
             <Button 
               onClick={handleDownloadPDF} 
@@ -117,7 +148,6 @@ export default function InventoryPage() {
                 <span className="xs:hidden">PDF</span>
             </Button>
 
-            {/* 5. ACTUALIZAR BOTÓN DE EMAIL PARA ABRIR EL MODAL */}
             <Button 
                 onClick={() => setIsEmailModalOpen(true)} 
                 className="w-full sm:w-auto px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" 
@@ -151,7 +181,6 @@ export default function InventoryPage() {
             />
         )}
 
-        {/* Tabla/Cards de Productos - Responsive */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
             {loading ? (
               <div className="p-8 sm:p-12 text-center text-gray-500">Cargando datos...</div>
@@ -166,6 +195,7 @@ export default function InventoryPage() {
                               <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
                               <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Características</th>
                               <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Precio</th>
+                              {isAdmin && <th className="px-4 lg:px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Acción</th>}
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -179,6 +209,17 @@ export default function InventoryPage() {
                                           <div key={moneda} className="whitespace-nowrap">{moneda} ${valor.toLocaleString()}</div>
                                       ))}
                                   </td>
+                                  {isAdmin && (
+                                    <td className="px-4 lg:px-6 py-4 text-right">
+                                       <button 
+                                         onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
+                                         className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                         title="Eliminar producto"
+                                       >
+                                         <Trash2 size={18}/>
+                                       </button>
+                                    </td>
+                                  )}
                               </tr>
                           ))}
                       </tbody>
@@ -194,15 +235,25 @@ export default function InventoryPage() {
                           <p className="font-bold text-gray-900">{prod.nombre}</p>
                           <p className="text-xs text-gray-500">Código: {prod.codigo}</p>
                         </div>
-                        <div className="text-right">
-                          {Object.entries(prod.precios).map(([moneda, valor]) => (
-                            <p key={moneda} className="text-sm font-bold text-green-600">
-                              {moneda} ${valor.toLocaleString()}
-                            </p>
-                          ))}
-                        </div>
+                        {isAdmin && (
+                            <button 
+                                onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
+                                className="text-gray-300 hover:text-red-500 p-2 -mt-2 -mr-2"
+                            >
+                                <Trash2 size={20}/>
+                            </button>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-500 line-clamp-2">{prod.caracteristicas}</p>
+                      <div className="flex justify-between items-end mt-2">
+                          <p className="text-xs text-gray-500 line-clamp-2 w-2/3">{prod.caracteristicas}</p>
+                          <div className="text-right">
+                            {Object.entries(prod.precios).map(([moneda, valor]) => (
+                                <p key={moneda} className="text-sm font-bold text-green-600">
+                                {moneda} ${valor.toLocaleString()}
+                                </p>
+                            ))}
+                          </div>
+                      </div>
                     </div>
                   ))}
                 </div>

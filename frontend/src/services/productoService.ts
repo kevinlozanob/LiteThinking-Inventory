@@ -51,3 +51,7 @@ export const sendEmailReport = async (email: string) => {
   });
   return response.data;
 };
+
+export const deleteProducto = async (id: number): Promise<void> => {
+  await api.delete(`productos/${id}/`);
+};
