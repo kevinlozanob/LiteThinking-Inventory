@@ -66,7 +66,7 @@ export default function InventoryPage() {
   const handleSendEmailSubmit = async (email: string) => {
     setSendingEmail(true);
     try {
-        await sendEmailReport(email);
+        await sendEmailReport(email, nit);
         showToast(`Reporte enviado correctamente a ${email}`, 'success'); 
         setIsEmailModalOpen(false);
     } catch (error) {
@@ -79,7 +79,7 @@ export default function InventoryPage() {
 
   const handleDownloadPDF = async () => {
       try {
-          await downloadPDF();
+          await downloadPDF(nit);
           showToast("Descarga de PDF iniciada", 'info');
       } catch (e) {
           showToast("Error descargando el PDF", 'error');

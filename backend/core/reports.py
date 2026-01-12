@@ -58,7 +58,7 @@ def draw_header_footer(canvas, doc):
     
     canvas.restoreState()
 
-def generar_pdf_inventario(productos):
+def generar_pdf_inventario(productos, info_empresa_backup=None):
     buffer = io.BytesIO()
     
     doc = SimpleDocTemplate(
@@ -73,8 +73,13 @@ def generar_pdf_inventario(productos):
     elements = []
     styles = getSampleStyleSheet()
 
-    # --- INFO BLOCK ---
-    empresa_nombre = productos[0].empresa.nombre if productos else "N/A"
+    if productos:
+        empresa_nombre = productos[0].empresa.nombre
+    elif info_empresa_backup:
+        empresa_nombre = info_empresa_backup.get('nombre', 'N/A')
+    else:
+        empresa_nombre = "N/A"
+
     fecha_hoy = datetime.now().strftime("%Y-%m-%d").upper()
     total_items = str(len(productos))
 

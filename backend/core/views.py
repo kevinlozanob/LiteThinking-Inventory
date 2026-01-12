@@ -29,12 +29,31 @@ class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAdminOrReadOnly]
-    
+
     # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])
     def descargar_reporte(self, request):
+        nit = request.query_params.get('empresa')
         productos = self.get_queryset()
-        buffer = generar_pdf_inventario(productos)
+        
+        info_empresa = None
+        
+        if nit:
+            productos = productos.filter(empresa_id=nit)
+
+            if not productos.exists():
+                try:
+                    empresa = EmpresaModel.objects.get(nit=nit)
+                    info_empresa = {
+                        'nombre': empresa.nombre,
+                        'nit': empresa.nit,
+                        'direccion': empresa.direccion,
+                        'telefono': empresa.telefono
+                    }
+                except EmpresaModel.DoesNotExist:
+                    pass
+
+        buffer = generar_pdf_inventario(productos, info_empresa_backup=info_empresa)
         return FileResponse(buffer, as_attachment=True, filename='inventario.pdf')
 
     @action(detail=False, methods=['post'])
@@ -47,15 +66,34 @@ class ProductoViewSet(viewsets.ModelViewSet):
             
         texto = generar_descripcion_ia(nombre, caracteristicas)
         return Response({"descripcion": texto})
+    
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def enviar_reporte_email(self, request):
         email_destino = request.data.get('email')
+        nit = request.data.get('nit')
         
         if not email_destino:
             return Response({"error": "Se requiere un email de destino"}, status=400)
 
         productos = self.get_queryset()
-        pdf_buffer = generar_pdf_inventario(productos)
+        info_empresa = None
+        
+        if nit:
+            productos = productos.filter(empresa_id=nit)
+            if not productos.exists():
+                try:
+                    empresa = EmpresaModel.objects.get(nit=nit)
+                    info_empresa = {
+                        'nombre': empresa.nombre,
+                        'nit': empresa.nit,
+                        'direccion': empresa.direccion,
+                        'telefono': empresa.telefono
+                    }
+                except EmpresaModel.DoesNotExist:
+                    pass
+
+        pdf_buffer = generar_pdf_inventario(productos, info_empresa_backup=info_empresa)
+        
         
         pdf_content = pdf_buffer.getvalue()
         pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')

@@ -27,10 +27,11 @@ export const generarDescripcionIA = async (nombre: string): Promise<string> => {
   return response.data.descripcion;
 };
 
-export const downloadPDF = async () => {
+export const downloadPDF = async (nit?: string) => {
 
   const response = await api.get('productos/descargar_reporte/', {
     responseType: 'blob', 
+    params: { empresa: nit } 
   });
 
   const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -45,9 +46,10 @@ export const downloadPDF = async () => {
   window.URL.revokeObjectURL(url);
 };
 
-export const sendEmailReport = async (email: string) => {
+export const sendEmailReport = async (email: string, nit?: string) => {
   const response = await api.post('productos/enviar_reporte_email/', {
-    email: email
+    email: email,
+    nit: nit
   });
   return response.data;
 };
