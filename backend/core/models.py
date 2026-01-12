@@ -60,7 +60,7 @@ class ProductoModel(models.Model):
                 codigo=self.codigo,
                 nombre=self.nombre,
                 caracteristicas=self.caracteristicas,
-                empresa_nit=self.empresa_id, # Usamos el ID, no el objeto Django
+                empresa_nit=self.empresa_id,
                 precios=self.precios
             )
         except ValueError as e:

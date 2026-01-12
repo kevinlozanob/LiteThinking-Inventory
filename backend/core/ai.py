@@ -22,7 +22,6 @@ def generar_descripcion_ia(nombre_producto, caracteristicas_basicas):
         """
         
         chat_completion = client.chat.completions.create(
-             # Usamos Llama3 (versión rápida)
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
         )

@@ -4,7 +4,6 @@ from decimal import Decimal
 
 @dataclass
 class Producto:
-# Representa un producto con sus detalles y precios en diferentes monedas.
     codigo: str
     nombre: str
     caracteristicas: str

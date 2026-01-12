@@ -8,7 +8,6 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
-        #internamente Django lo llama is_staff
         data['is_admin'] = self.user.is_staff 
         data['email'] = self.user.email
         return data
