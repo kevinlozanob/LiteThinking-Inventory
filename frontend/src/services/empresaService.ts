@@ -25,3 +25,8 @@ export const createEmpresa = async (data: Empresa): Promise<Empresa> => {
 export const deleteEmpresa = async (nit: string): Promise<void> => {
   await api.delete(`empresas/${nit}/`);
 };
+
+export const updateEmpresa = async (nit: string, data: Partial<Empresa>): Promise<Empresa> => {
+  const response = await api.patch<Empresa>(`empresas/${nit}/`, data);
+  return response.data;
+};

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getEmpresas, deleteEmpresa, type Empresa } from '../../services/empresaService';
+import { getEmpresas, deleteEmpresa, updateEmpresa, type Empresa } from '../../services/empresaService';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Building2, Trash2 } from 'lucide-react';
+import { ChevronRight, Building2, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmModal } from '../atoms/ConfirmModal';
+import { EditEmpresaModal } from './EditEmpresaModal';
 
 interface EmpresaListProps {
   refreshTrigger: number;
@@ -13,12 +14,16 @@ interface EmpresaListProps {
 export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Estado para eliminar
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; nit: string; nombre: string }>({
-    isOpen: false,
-    nit: '',
-    nombre: ''
+    isOpen: false, nit: '', nombre: ''
   });
   const [deleting, setDeleting] = useState(false);
+
+  // Estado para editar
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
   
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -40,28 +45,45 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
     }
   };
 
-  // Abrir modal de confirmación
+  // --- LOGICA EDITAR ---
+  const openEditModal = (e: React.MouseEvent, empresa: Empresa) => {
+    e.stopPropagation(); // Evitar navegar al detalle
+    setEmpresaToEdit(empresa);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateEmpresa = async (nit: string, data: Partial<Empresa>) => {
+    try {
+        const updated = await updateEmpresa(nit, data);
+        
+        // Actualizar estado local para reflejar cambios sin recargar
+        setEmpresas(prev => prev.map(emp => emp.nit === nit ? updated : emp));
+        
+        showToast("Empresa actualizada correctamente", "success");
+        setEditModalOpen(false);
+        setEmpresaToEdit(null);
+    } catch (error) {
+        showToast("No se pudo actualizar la empresa", "error");
+        throw error;
+    }
+  };
+
+  // --- LOGICA ELIMINAR ---
   const openDeleteModal = (e: React.MouseEvent, nit: string, nombre: string) => {
     e.stopPropagation();
     setDeleteModal({ isOpen: true, nit, nombre });
   };
 
-  // Cerrar modal
-  const closeDeleteModal = () => {
-    setDeleteModal({ isOpen: false, nit: '', nombre: '' });
-  };
-
-  // Ejecutar eliminación
   const confirmDelete = async () => {
     setDeleting(true);
     try {
       await deleteEmpresa(deleteModal.nit);
       setEmpresas(prev => prev.filter(emp => emp.nit !== deleteModal.nit));
       showToast("Empresa eliminada correctamente", "success");
-      closeDeleteModal();
+      setDeleteModal({ isOpen: false, nit: '', nombre: '' });
     } catch (error) {
       console.error(error);
-      showToast("No se pudo eliminar la empresa. Intente nuevamente.", "error");
+      showToast("No se pudo eliminar la empresa.", "error");
     } finally {
       setDeleting(false);
     }
@@ -71,14 +93,21 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
 
   return (
     <>
-      {/* Modal de Confirmación */}
+      {/* MODALES */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Eliminar Empresa"
         message={`¿Estás seguro de eliminar "${deleteModal.nombre}"? Esta acción eliminará todos sus productos y no se puede deshacer.`}
         onConfirm={confirmDelete}
-        onCancel={closeDeleteModal}
+        onCancel={() => setDeleteModal({ isOpen: false, nit: '', nombre: '' })}
         loading={deleting}
+      />
+
+      <EditEmpresaModal 
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        empresa={empresaToEdit}
+        onUpdate={handleUpdateEmpresa}
       />
 
       <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
@@ -98,22 +127,36 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{empresa.nit}</td>
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{empresa.nombre}</td>
                   <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end items-center gap-3">
+                    <div className="flex justify-end items-center gap-2">
+                       {/* Botón Ver */}
                       <button 
                         onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
-                        className="text-[#d8b600] hover:text-[#bfa100] font-bold inline-flex items-center gap-1 transition-colors"
+                        className="text-[#d8b600] hover:text-[#bfa100] font-bold p-2 mr-2"
+                        title="Ver Inventario"
                       >
-                        Ver Inventario <ChevronRight size={16}/>
+                         <ChevronRight size={20}/>
                       </button>
                       
                       {isAdmin && (
-                        <button 
-                          onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
-                          className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                          title="Eliminar Empresa"
-                        >
-                          <Trash2 size={18}/>
-                        </button>
+                        <>
+                            {/* Botón Editar */}
+                            <button 
+                                onClick={(e) => openEditModal(e, empresa)}
+                                className="text-gray-400 hover:text-blue-600 transition-colors p-2"
+                                title="Editar Empresa"
+                            >
+                                <Pencil size={18}/>
+                            </button>
+                            
+                            {/* Botón Eliminar */}
+                            <button 
+                                onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
+                                className="text-gray-400 hover:text-red-600 transition-colors p-2"
+                                title="Eliminar Empresa"
+                            >
+                                <Trash2 size={18}/>
+                            </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -142,16 +185,24 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
                   {isAdmin && (
-                    <button 
-                      onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
-                      className="text-gray-300 hover:text-red-500 p-2"
-                    >
-                      <Trash2 size={20}/>
-                    </button>
+                    <>
+                         <button 
+                            onClick={(e) => openEditModal(e, empresa)}
+                            className="text-gray-300 hover:text-blue-500 p-2"
+                        >
+                            <Pencil size={20}/>
+                        </button>
+                        <button 
+                            onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)}
+                            className="text-gray-300 hover:text-red-500 p-2"
+                        >
+                            <Trash2 size={20}/>
+                        </button>
+                    </>
                   )}
-                  <ChevronRight size={20} className="text-gray-400"/>
+                  <ChevronRight size={20} className="text-gray-400 ml-1"/>
                 </div>
               </div>
             </div>
