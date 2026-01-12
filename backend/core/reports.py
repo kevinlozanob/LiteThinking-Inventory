@@ -116,7 +116,7 @@ def generar_pdf_inventario(productos, info_empresa_backup=None):
         chars = p.caracteristicas[:40] + "..." if len(p.caracteristicas) > 40 else p.caracteristicas
         
         precio_txt = "N/A"
-        if p.precios:
+        if p.precios and isinstance(p.precios, dict) and len(p.precios) > 0:
             k = list(p.precios.keys())[0]
             v = p.precios[k]
             precio_txt = f"{k} {v:,.0f}"

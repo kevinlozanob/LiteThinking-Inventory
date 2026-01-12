@@ -29,6 +29,13 @@ class ProductoViewSet(viewsets.ModelViewSet):
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAdminOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        empresa_nit = self.request.query_params.get('empresa')
+        if empresa_nit:
+            queryset = queryset.filter(empresa_id=empresa_nit)
+        return queryset
 
     # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])

@@ -45,14 +45,13 @@ export default function InventoryPage() {
   const cargarDataCompuesto = async () => {
     setLoading(true);
     try {
-      const [empresaData, allProductos] = await Promise.all([
+      const [empresaData, productosYaFiltrados] = await Promise.all([
         getEmpresaByNit(nit!),
-        getProductos()
+        getProductos(nit!)
       ]);
       
       setEmpresaInfo(empresaData);
-      const filtrados = allProductos.filter(p => String(p.empresa) === String(nit));
-      setProductos(filtrados);
+      setProductos(productosYaFiltrados); 
     } catch (error) {
       console.error(error);
       showToast("Error cargando el inventario de la empresa", 'error');

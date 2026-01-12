@@ -9,8 +9,9 @@ export interface Producto {
   precios: Record<string, number>;
 }
 
-export const getProductos = async (): Promise<Producto[]> => {
-  const response = await api.get<Producto[]>('productos/');
+export const getProductos = async (nit?: string): Promise<Producto[]> => {
+  const url = nit ? `productos/?empresa=${nit}` : 'productos/';
+  const response = await api.get<Producto[]>(url);
   return response.data;
 };
 
