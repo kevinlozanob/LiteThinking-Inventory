@@ -3,10 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/atoms/Button';
 import { EmpresaList } from '../components/organisms/EmpresaList';
 import { AddEmpresaForm } from '../components/organisms/AddEmpresaForm';
-import { LogOut, Plus, UserCircle, ShieldCheck, Shield } from 'lucide-react'; // <--- ICONOS NUEVOS
+import { LogOut, Plus, UserCircle, ShieldCheck} from 'lucide-react';
 
 export default function Dashboard() {
-  const { logout, isAdmin, userEmail } = useAuth(); // <--- TRAEMOS userEmail
+  const { logout, isAdmin, userEmail } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [refreshList, setRefreshList] = useState(0);
 
