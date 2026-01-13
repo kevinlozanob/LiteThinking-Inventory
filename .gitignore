@@ -53,4 +53,18 @@ build/
 # Poetry
 poetry.lock
 
-CODIGO_COMPLETO.txt 
+#logs
+CODIGO_COMPLETO.txt
+
+# --- GitHub Actions Keys (SEGURIDAD CRÍTICA) ---
+deploy_key
+deploy_key.pub
+
+# --- Frontend Build (GitHub Actions lo construye, no lo subimos) ---
+frontend/dist/
+frontend-final/
+deploy-temp/
+
+# --- Logs y Basura de sistema ---
+*.log
+.DS_Store

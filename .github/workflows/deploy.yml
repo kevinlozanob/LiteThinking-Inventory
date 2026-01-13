@@ -1,0 +1,101 @@
+name: Deploy Production
+
+# Esto le dice: "Ejecútese cada vez que yo haga un push a la rama main"
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Descargar su código en los servidores de GitHub
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Configurar Node.js para compilar el Frontend
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # 3. Compilar el Frontend (Aquí GitHub pone la RAM, no su VPS)
+    - name: Install & Build Frontend
+      run: |
+        cd frontend
+        npm install
+        # IMPORTANTE: Esto asegura que el frontend busque el backend en la misma URL
+        export VITE_API_URL=/api  
+        npm run build
+
+    # 4. Subir la carpeta 'dist' a la VPS (Usando sus Secretos)
+    - name: Copy files to VPS
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "frontend/dist/*"
+        target: "/home/${{ secrets.VPS_USER }}/deploy-temp"
+        strip_components: 2 # Esto evita que se cree la carpeta 'frontend/dist' allá
+
+    # 5. Entrar por SSH y acomodar todo
+    - name: Deploy on VPS
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "INICIANDO DESPLIEGUE..."
+
+          # --- PARTE 1: FRONTEND ---
+          echo "Actualizando Frontend..."
+          # Limpiar carpeta destino
+          sudo rm -rf /var/www/litethinking/frontend/assets
+          sudo rm -f /var/www/litethinking/frontend/index.html
+          
+          # Mover archivos nuevos desde la carpeta temporal
+          sudo cp -r /home/${{ secrets.VPS_USER }}/deploy-temp/* /var/www/litethinking/frontend/
+          
+          # Fix de la carpeta assets (Por si acaso)
+          cd /var/www/litethinking/frontend
+          if [ ! -d "assets" ]; then
+             sudo mkdir -p assets
+             sudo mv *.js *.css assets/ 2>/dev/null || true
+          fi
+          
+          # Permisos para Nginx
+          sudo chown -R www-data:www-data /var/www/litethinking/frontend
+          sudo chmod -R 755 /var/www/litethinking/frontend
+          
+          # Borrar temporales
+          rm -rf /home/${{ secrets.VPS_USER }}/deploy-temp
+
+          # --- PARTE 2: BACKEND ---
+          echo "Actualizando Backend..."
+          cd /var/www/litethinking/backend
+          
+          # Bajar cambios de GitHub (Solo código Python)
+          git fetch origin
+          git reset --hard origin/main
+          
+          # Actualizar librerías (Por si cambió requirements.txt)
+          source venv/bin/activate
+          pip install -r backend/requirements.txt
+          pip install ./core-domain --upgrade
+          
+          # Migraciones y Estáticos
+          cd backend
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+          
+          # --- PARTE 3: REINICIAR ---
+          echo "Reiniciando Servicios..."
+          sudo systemctl restart litethinking
+          # Reiniciamos Nginx por si las moscas (caché)
+          sudo systemctl restart nginx
+          
+          echo "DESPLIEGUE FINALIZADO EXITOSAMENTE"
