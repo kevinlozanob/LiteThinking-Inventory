@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getEmpresas, deleteEmpresa, updateEmpresa, type Empresa } from '../../services/empresaService';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Building2, Trash2, Pencil, MapPin, Phone } from 'lucide-react';
@@ -52,11 +52,12 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
     try {
         const updated = await updateEmpresa(nit, data);
         setEmpresas(prev => prev.map(emp => emp.nit === nit ? updated : emp));
-        showToast("Empresa actualizada", "success");
+        showToast("Datos de la empresa actualizados.", "success");
         setEditModalOpen(false);
         setEmpresaToEdit(null);
     } catch (error) {
         showToast("Error al actualizar", "error");
+        console.error(error);
     }
   };
 
@@ -70,10 +71,10 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
     try {
       await deleteEmpresa(deleteModal.nit);
       setEmpresas(prev => prev.filter(emp => emp.nit !== deleteModal.nit));
-      showToast("Empresa eliminada", "success");
+      showToast("Empresa eliminada correctamente.", "success");
       setDeleteModal({ isOpen: false, nit: '', nombre: '' });
     } catch (error) {
-      showToast("Error al eliminar", "error");
+      showToast("No se pudo eliminar la empresa. Intente nuevamente.", "error");
     } finally {
       setDeleting(false);
     }
@@ -90,7 +91,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         title="Eliminar Empresa"
-        message={`¿Borrar "${deleteModal.nombre}" y todo su inventario?`}
+        message={`¿Borrar "${deleteModal.nombre}" y todo su inventario? Esta acción es irreversible.`}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteModal({ isOpen: false, nit: '', nombre: '' })}
         loading={deleting}
@@ -105,7 +106,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         
-        {/* DESKTOP TABLE */}
+        {/* --- DESKTOP TABLE --- */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/50">
@@ -140,14 +141,22 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right whitespace-nowrap">
-                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end items-center gap-2">
                       {isAdmin && (
                         <>
-                            <button onClick={(e) => openEditModal(e, empresa)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                                <Pencil size={16}/>
+                            <button 
+                                onClick={(e) => openEditModal(e, empresa)} 
+                                className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                title="Editar"
+                            >
+                                <Pencil size={18}/>
                             </button>
-                            <button onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all">
-                                <Trash2 size={16}/>
+                            <button 
+                                onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} 
+                                className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                                title="Eliminar"
+                            >
+                                <Trash2 size={18}/>
                             </button>
                         </>
                       )}
@@ -162,7 +171,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
           </table>
         </div>
 
-        {/* MOBILE CARDS*/}
+        {/* --- MOBILE CARDS (VISTA CELULAR) --- */}
         <div className="sm:hidden flex flex-col gap-3 p-3 bg-gray-50">
           {empresas.map((empresa) => (
             <div 
@@ -180,10 +189,22 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                     <p className="text-xs text-gray-500 font-mono">{empresa.nit}</p>
                   </div>
                 </div>
+                {/* BOTONES MÓVILES VISIBLES */}
                 {isAdmin && (
-                    <button onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} className="text-gray-300 p-1">
-                        <XIconMini />
-                    </button>
+                    <div className="flex gap-1">
+                        <button 
+                            onClick={(e) => openEditModal(e, empresa)} 
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                        >
+                            <Pencil size={18}/>
+                        </button>
+                        <button 
+                            onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} 
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                        >
+                            <Trash2 size={18}/>
+                        </button>
+                    </div>
                 )}
               </div>
               
@@ -193,7 +214,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <span className="text-xs font-semibold text-[#E6C200]">Ver Inventario</span>
+                  <span className="text-xs font-semibold text-[#E6C200]">Toca para ver inventario</span>
                   <div className="bg-gray-50 p-1 rounded-full">
                     <ChevronRight size={16} className="text-gray-400"/>
                   </div>
@@ -216,5 +237,3 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
     </>
   );
 };
-
-const XIconMini = () => <Trash2 size={16} className="hover:text-red-500 transition-colors"/>
