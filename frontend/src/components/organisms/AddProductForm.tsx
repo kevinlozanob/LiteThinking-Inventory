@@ -4,6 +4,7 @@ import { Button } from '../atoms/Button';
 import { createProducto, generarDescripcionIA } from '../../services/productoService';
 import { Wand2, X, Mic, Square, Loader2 } from 'lucide-react'; 
 import { useToast } from '../../context/ToastContext';
+import { getErrorMessage } from '../../utils/apiErrors';
 import api from '../../services/api';
 
 interface Props {
@@ -135,7 +136,8 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const preciosJSON = { [formData.moneda]: parseFloat(formData.precio) };
+      const numericPrice = parseFloat(formData.precio);
+      const preciosJSON = { [formData.moneda]: numericPrice };
       await createProducto({
         codigo: formData.codigo,
         nombre: formData.nombre,
@@ -144,16 +146,17 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         precios: preciosJSON
       });
       showToast(
-        `El producto "${formData.nombre}" ya está en la lista.`, 
+        `El producto "${formData.nombre}" ha sido añadido al inventario correctamente.`, 
         'success', 
-        "Producto Guardado"
+        "Producto Creado"
       );
       onSuccess();
     } catch (err) {
+      const message = getErrorMessage(err);
       showToast(
-        "Verifica que el código no esté repetido.", 
+        message, 
         'error', 
-        "No se pudo guardar"
+        "Error al procesar solicitud"
       );
     } finally {
       setLoading(false);
