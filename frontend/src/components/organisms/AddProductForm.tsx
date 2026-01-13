@@ -23,7 +23,7 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
   const [loading, setLoading] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   
-  const [isRecording, setIsRecording] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -113,18 +113,17 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         setIsProcessingVoice(false);
     }
   };
-  // -------------------------------------
 
   const handleAI = async () => {
     if (!formData.nombre) {
-        showToast("Escribe un nombre primero", 'info');
+        showToast("Escribe un nombre del producto primero", 'info');
         return;
     }
     setGeneratingAI(true);
     try {
       const desc = await generarDescripcionIA(formData.nombre);
       setFormData(prev => ({ ...prev, caracteristicas: desc }));
-      showToast("Descripción generada", 'success');
+      showToast("Descripción generada automáticamente.", 'success');
     } catch (err) {
       showToast("Error contactando a la IA", 'error');
     } finally {
@@ -167,20 +166,20 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
     <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200 mb-6 animate-[fadeIn_0.3s_ease-out]">
       
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-3">
-            <h3 className="text-base sm:text-lg font-bold text-gray-800">Nuevo Producto</h3>
+      <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <h3 className="text-lg font-bold text-gray-800">Nuevo Producto</h3>
             
-            {/* BOTÓN DE GRABACIÓN TOGGLE */}
+            {/* BOTÓN DE GRABACIÓN */}
             <button
                 type="button"
                 onClick={handleMicClick}
                 disabled={isProcessingVoice}
                 className={`
-                    flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all border select-none
+                    flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all border select-none w-fit
                     ${isRecording 
                         ? 'bg-red-600 text-white border-red-700 animate-pulse shadow-lg shadow-red-200' 
-                        : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'}
+                        : 'bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm'}
                     ${isProcessingVoice ? 'opacity-70 cursor-wait' : ''}
                 `}
             >
@@ -206,25 +205,37 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         </button>
       </div>
       
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
-        <Input 
-          placeholder="Código" 
-          value={formData.codigo}
-          onChange={e => setFormData({...formData, codigo: e.target.value})}
-          required 
-        />
-        <Input 
-          placeholder="Nombre Producto" 
-          value={formData.nombre}
-          onChange={e => setFormData({...formData, nombre: e.target.value})}
-          required 
-        />
+      <form onSubmit={handleSubmit} className="space-y-5">
         
-        <div className="sm:col-span-2 relative">
+        {/* FILA 1: CÓDIGO Y NOMBRE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input 
+              label="Código / SKU"
+              helpText="Identificador único. Use letras, números y guiones. Sin espacios. Ej: PROD-001"
+              placeholder="Ej: PROD-001" 
+              value={formData.codigo}
+              onChange={e => setFormData({...formData, codigo: e.target.value})}
+              required 
+            />
+            <Input 
+              label="Nombre del Producto"
+              helpText="Nombre claro para el inventario. Evite nombres genéricos duplicados."
+              placeholder="Ej: Teclado Mecánico RGB" 
+              value={formData.nombre}
+              onChange={e => setFormData({...formData, nombre: e.target.value})}
+              required 
+            />
+        </div>
+        
+        {/* FILA 2: CARACTERÍSTICAS (TEXTAREA) */}
+        <div className="relative">
+          <label className="block text-sm font-bold text-gray-700 mb-1.5">
+            Características
+          </label>
           <textarea
-            className="w-full p-3 pb-12 sm:pb-3 sm:pr-36 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#E6C200] text-sm resize-none transition-all"
+            className="w-full p-3 pb-12 sm:pb-3 sm:pr-36 rounded-lg border border-gray-200 focus:outline-none focus:border-[#E6C200] focus:ring-4 focus:ring-[#E6C200]/20 text-sm resize-none transition-all shadow-sm"
             rows={3}
-            placeholder="Características..."
+            placeholder="Describa el producto..."
             value={formData.caracteristicas}
             onChange={e => setFormData({...formData, caracteristicas: e.target.value})}
             required
@@ -233,37 +244,57 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             type="button"
             onClick={handleAI}
             disabled={generatingAI}
-            className="absolute bottom-3 right-3 sm:top-3 sm:bottom-auto flex items-center gap-1 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-purple-700 disabled:opacity-50 shadow-sm"
+            className="absolute bottom-3 right-3 sm:top-9 sm:bottom-auto flex items-center gap-1 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-purple-700 disabled:opacity-50 shadow-md transition-colors"
           >
             <Wand2 size={12} className={generatingAI ? "animate-spin" : ""} />
-            {generatingAI ? "Generando..." : "Autocompletar"}
+            {generatingAI ? "Generando..." : "Autocompletar con IA"}
           </button>
         </div>
 
-        <div className="flex gap-2 sm:col-span-1">
-            <select 
-                className="rounded border border-gray-200 px-2 sm:px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#E6C200] min-w-[70px]"
-                value={formData.moneda}
-                onChange={e => setFormData({...formData, moneda: e.target.value})}
-            >
-                <option value="USD">USD</option>
-                <option value="COP">COP</option>
-                <option value="EUR">EUR</option>
-            </select>
-            <Input 
-                placeholder="Precio" 
-                type="number"
-                value={formData.precio}
-                onChange={e => setFormData({...formData, precio: e.target.value})}
-                required 
-            />
+        {/* FILA 3: PRECIO Y MONEDA */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Moneda</label>
+                <select 
+                    className="w-full h-[44px] sm:h-[48px] rounded-lg border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:border-[#E6C200] focus:ring-4 focus:ring-[#E6C200]/20 cursor-pointer shadow-sm"
+                    value={formData.moneda}
+                    onChange={e => setFormData({...formData, moneda: e.target.value})}
+                >
+                    <option value="USD">USD (Dólar)</option>
+                    <option value="COP">COP (Peso)</option>
+                    <option value="EUR">EUR (Euro)</option>
+                </select>
+            </div>
+
+            {/* Precio (Input) */}
+            <div className="sm:col-span-2">
+                <Input 
+                    label="Valor Unitario"
+                    helpText="Precio numérico. Debe ser mayor a 0. No use signos de moneda. Ej: 25000"
+                    placeholder="0.00" 
+                    type="number"
+                    value={formData.precio}
+                    onChange={e => setFormData({...formData, precio: e.target.value})}
+                    required 
+                />
+            </div>
         </div>
 
-        <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 mt-2 sm:justify-end">
-          <Button type="button" onClick={onCancel} className="bg-gray-200 hover:bg-gray-300 w-full sm:w-auto px-4 text-gray-700 border border-gray-300 hidden sm:flex">
+        {/* FOOTER */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-200 sm:justify-end">
+          <Button 
+            type="button" 
+            onClick={onCancel} 
+            className="bg-white hover:bg-gray-50 w-full sm:w-auto px-6 text-gray-700 border border-gray-300"
+          >
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" disabled={loading} className="w-full sm:w-auto px-6 shadow-sm">
+          <Button 
+            type="submit" 
+            variant="primary" 
+            disabled={loading} 
+            className="w-full sm:w-auto px-8 shadow-md"
+          >
             {loading ? "Guardando..." : "Guardar Producto"}
           </Button>
         </div>
