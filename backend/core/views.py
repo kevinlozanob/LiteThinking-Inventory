@@ -37,7 +37,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(empresa_id=empresa_nit)
         return queryset
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def chat_inventario(self, request):
         nit = request.data.get('nit')
         historial = request.data.get('historial') 
@@ -62,7 +62,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         respuesta_ia = chat_con_inventario(historial, datos_minificados)
         
         return Response({"respuesta": respuesta_ia})
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def interpretar_voz(self, request):
         audio_file = request.FILES.get('audio')
         
@@ -101,7 +101,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         buffer = generar_pdf_inventario(productos, info_empresa_backup=info_empresa)
         return FileResponse(buffer, as_attachment=True, filename='inventario.pdf')
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def generar_descripcion(self, request):
         nombre = request.data.get('nombre')
         caracteristicas = request.data.get('caracteristicas', '')
