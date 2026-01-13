@@ -20,15 +20,12 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
     setLoading(true);
     try {
       await createEmpresa(formData);
-      
-      showToast("La empresa ha sido registrada exitosamente en el sistema.", "success", "Operación Exitosa");
-      
+      showToast("La empresa ha sido registrada exitosamente.", "success", "Operación Exitosa");
       onSuccess();
       setFormData({ nit: '', nombre: '', direccion: '', telefono: '' });
     } catch (err: any) {
       const message = getErrorMessage(err);
       showToast(message, "error", "Error de Validación");
-      console.error("Error creating company:", err);
     } finally {
       setLoading(false);
     }
@@ -36,37 +33,49 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6 shadow-sm animate-[fadeIn_0.3s_ease-out]">
-      <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+      <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
          <h3 className="text-lg font-bold text-gray-800">Registrar Nueva Empresa</h3>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
         <Input 
-          placeholder="NIT (Identificación Tributaria)" 
+          label="NIT"
+          helpText="Escriba SOLO números y guiones. No use puntos, espacios ni letras. Ejemplo válido: 900123456-1"
+          placeholder="Ej: 900123456-1" 
           value={formData.nit}
           onChange={e => setFormData({...formData, nit: e.target.value})}
           required 
         />
+
         <Input 
-          placeholder="Razón Social (Nombre de la Empresa)" 
+          label="Razón Social"
+          helpText="Nombre legal completo registrado en Cámara de Comercio. Evite abreviaturas informales."
+          placeholder="Ej: Tech Solutions S.A.S" 
           value={formData.nombre}
           onChange={e => setFormData({...formData, nombre: e.target.value})}
           required 
         />
+
         <Input 
-          placeholder="Dirección" 
+          label="Dirección"
+          helpText="Ubicación física para correspondencia. Incluya la ciudad si es una sede nacional."
+          placeholder="Ej: Calle 100 # 15-20, Bogotá" 
           value={formData.direccion}
           onChange={e => setFormData({...formData, direccion: e.target.value})}
           required 
         />
+
         <Input 
-          placeholder="Teléfono de Contacto" 
+          label="Teléfono"
+          helpText="Solo dígitos numéricos. NO use paréntesis, espacios ni guiones. Mínimo 7 números."
+          placeholder="Ej: 3001234567" 
           value={formData.telefono}
           onChange={e => setFormData({...formData, telefono: e.target.value})}
           required 
         />
 
-        <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 mt-4">
+        <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 mt-4 pt-2 border-t border-gray-100">
            <Button 
             type="button"  
             onClick={onCancel} 
@@ -79,9 +88,9 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
             type="submit" 
             variant="primary" 
             disabled={loading}
-            className="w-full sm:flex-1 shadow-sm"
+            className="w-full sm:flex-1 shadow-md hover:shadow-lg transition-shadow"
           >
-            {loading ? "Procesando Datos..." : "Guardar Registro"}
+            {loading ? "Validando integridad..." : "Guardar Registro"}
           </Button>
         </div>
       </form>
