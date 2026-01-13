@@ -1,17 +1,70 @@
-version: '3.8'
-
 services:
+  # --- Base de Datos ---
   db:
     image: postgres:15-alpine
-    container_name: prueba_fe_db
-    environment:
-      - POSTGRES_DB=prueba_fe_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
+    container_name: litethinking_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=litedb
+      - POSTGRES_USER=liteuser
+      - POSTGRES_PASSWORD=litepassword
+    ports:
+      - "5432:5432"
+    networks:
+      - lite-network
+
+  # --- Backend ---
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: litethinking_backend
+    volumes:
+      - ./backend:/app/backend
+      - ./core-domain:/app/core-domain
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key
+      - ALLOWED_HOSTS=*
+      - DB_ENGINE=postgres
+      - DB_NAME=litedb
+      - DB_USER=liteuser
+      - DB_PASSWORD=litepassword
+      - DB_HOST=db
+      - DB_PORT=5432
+      # Lee las keys del archivo .env local si existe
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+    depends_on:
+      - db
+    networks:
+      - lite-network
+
+  # --- Frontend ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: litethinking_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - lite-network
 
 volumes:
   postgres_data:
+
+networks:
+  lite-network:
+    driver: bridge
