@@ -26,9 +26,17 @@ El proyecto se estructura separando la lógica de negocio de la infraestructura 
 *   **Integración IA:** Diseño e implementación de adaptadores desacoplados para la orquestación de modelos LLM (Llama 3) y pipelines de Speech-to-Text (Whisper), integrados como servicios de dominio consumibles por la plataforma.
 
 ### 3. Capa de Presentación (`/frontend`)
-*   **Stack:** React, TypeScript y Vite.
-*   **Estilos:** TailwindCSS bajo metodología Atomic Design.
+*   **   **Tecnología:** React, TypeScript, Vite.
+*   **Diseño (Requisito J):** Se aplicó la metodología **Atomic Design**, estructurando los componentes en `atoms` (Botones, Inputs), `molecules` (Campos de formulario) y `organisms` (Formularios completos, Tablas).
+*   **Estilos:** TailwindCSS para una interfaz moderna y totalmente **responsiva (Mobile-First)**.
 ---
+### 5. Cargar Datos de Prueba (Seeding)
+
+Para poblar la base de datos con usuarios y productos de ejemplo, ejecute el siguiente comando dentro del contenedor:
+
+```bash
+docker compose exec backend python manage.py seed_db
+```
 
 ## Funcionalidad Adicional (Propuesta Técnica)
 
