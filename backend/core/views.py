@@ -9,7 +9,7 @@ from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer, SystemStatusSerializer
 
 from .reports import generar_pdf_inventario   
-from .ai import generar_descripcion_ia     
+from .ai import generar_descripcion_ia, procesar_audio_con_ia
 from .permissions import IsAdminOrReadOnly   
 
 from .utils import get_email_template
@@ -36,7 +36,20 @@ class ProductoViewSet(viewsets.ModelViewSet):
         if empresa_nit:
             queryset = queryset.filter(empresa_id=empresa_nit)
         return queryset
-
+    
+    @action(detail=False, methods=['post'])
+    def interpretar_voz(self, request):
+        audio_file = request.FILES.get('audio')
+        
+        if not audio_file:
+            return Response({"error": "No se envió archivo de audio"}, status=400)
+            
+        datos_estructurados = procesar_audio_con_ia(audio_file)
+        
+        if datos_estructurados:
+            return Response(datos_estructurados)
+        else:
+            return Response({"error": "No se pudo interpretar el audio"}, status=500)
     # Endpoint para bajar PDF
     @action(detail=False, methods=['get'])
     def descargar_reporte(self, request):

@@ -1229,7 +1229,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, verbose_name="Correo ElectrÃ³nico")
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False) # Para saber si es Administrador
+    is_staff = models.BooleanField(default=False)
 
     objects = UserManager()
 
@@ -1797,13 +1797,11 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\index.css
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* Inputs mÃ¡s fÃ¡ciles de tocar */
   input, select, textarea {
-    font-size: 16px !important; /* Evita zoom en iOS */
+    font-size: 16px !important;
   }
 }
 
-/* Scrollbar sutil */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -1829,12 +1827,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css' 
-import { ToastProvider } from './context/ToastContext.tsx' // <--- Importamos
+import { ToastProvider } from './context/ToastContext.tsx' 
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ToastProvider>  {/* <--- Envolvemos */}
+    <ToastProvider> 
       <App />
     </ToastProvider>
   </React.StrictMode>,
@@ -1856,19 +1854,14 @@ export const Button = ({ children, className = '', variant = 'primary', icon, ..
   const baseStyles = "w-full rounded-lg h-[44px] sm:h-[48px] text-xs sm:text-sm font-bold transition-all duration-200 ease-out flex items-center justify-center gap-2 sm:gap-3 shadow-sm active:scale-[0.98]";
   
   const variants = {
-    // ðŸŸ¡ PRIMARY: El amarillo con efecto invertido (Solo este hace el truco)
     primary: "bg-[#E6C200] text-black uppercase tracking-wide border-2 border-[#E6C200] hover:bg-white hover:text-[#E6C200] hover:shadow-md hover:-translate-y-0.5",
     
-    // âšª SECONDARY: Gris para "Cancelar" (Sin efecto amarillo)
     secondary: "bg-gray-100 text-gray-700 border-2 border-transparent hover:bg-gray-200",
     
-    // ðŸ”´ DANGER: Rojo para "Eliminar" o "PDF"
     danger: "bg-red-600 text-white border-2 border-transparent hover:bg-red-700 hover:shadow-md",
     
-    // ðŸŸ¦ OUTLINE: Fondo blanco con borde (Para "Volver")
     outline: "bg-white text-gray-600 border-2 border-gray-200 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50",
     
-    // ðŸŒ SOCIAL: Google/Facebook
     social: "bg-white text-gray-700 border border-gray-200 hover:border-gray-400 hover:bg-gray-50"
   };
 
@@ -1979,7 +1972,6 @@ export const EmailModal = ({ isOpen, onClose, onSubmit, loading = false }: Email
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop con blur */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
         onClick={onClose} 
@@ -2173,7 +2165,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
     try {
       await createEmpresa(formData);
       onSuccess();
-      setFormData({ nit: '', nombre: '', direccion: '', telefono: '' }); // Limpiar
+      setFormData({ nit: '', nombre: '', direccion: '', telefono: '' });
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 403) {
@@ -2232,7 +2224,7 @@ export const AddEmpresaForm = ({ onSuccess, onCancel }: Props) => {
             type="submit" 
             variant="primary" 
             disabled={loading}
-            className="w-full sm:flex-1" // Ocupa todo el ancho en mÃ³vil, y el espacio restante en PC
+            className="w-full sm:flex-1"
           >
             {loading ? "Guardando..." : "Guardar Empresa"}
           </Button>
@@ -2532,7 +2524,6 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
   const [formData, setFormData] = useState<Partial<Producto>>({});
   const [loading, setLoading] = useState(false);
   
-  // ESTADO SIMPLIFICADO: Una sola moneda y un solo precio
   const [currency, setCurrency] = useState('COP');
   const [price, setPrice] = useState<string | number>('');
 
@@ -2544,7 +2535,6 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
         caracteristicas: product.caracteristicas,
       });
 
-      // LÃ“GICA: Extraer el primer precio que encuentre
       const precios = product.precios || {};
       const monedas = Object.keys(precios);
 
@@ -2630,7 +2620,6 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
                 />
             </div>
 
-            {/* SecciÃ³n de Precio Simplificada */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <label className="text-xs sm:text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                     <DollarSign size={16} className="text-green-600"/> 
@@ -2638,7 +2627,7 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
                 </label>
                 
                 <div className="flex gap-3">
-                    {/* Lista desplegable de la moneda */}
+                    {/* Lista desplegable de moneda */}
                     <div className="w-1/3">
                         <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Moneda</label>
                         <select 
@@ -3450,12 +3439,10 @@ export default function InventoryPage() {
     }
   };
 
-  // NUEVO: Handler para actualizar producto
   const handleUpdateProduct = async (id: number, data: Partial<Producto>) => {
     try {
         const updatedProduct = await updateProducto(id, data);
         
-        // Actualizar estado local
         setProductos(prev => prev.map(p => (p.id === id ? updatedProduct : p)));
         
         showToast("Producto actualizado correctamente", "success");
@@ -3464,7 +3451,7 @@ export default function InventoryPage() {
     } catch (error) {
         console.error("Error update:", error);
         showToast("No se pudo actualizar el producto", "error");
-        throw error; // Para que el modal sepa que fallÃ³
+        throw error;
     }
   };
 
