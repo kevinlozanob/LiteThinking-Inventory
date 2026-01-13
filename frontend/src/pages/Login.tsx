@@ -13,9 +13,12 @@ export default function Login() {
 
   useEffect(() => {
     if (searchParams.get('expired') === 'true' && !toastShown.current) {
-        showToast("Tu sesión ha caducado. Por favor inicia sesión nuevamente.", "info");
+        showToast(
+            "Por seguridad, tu sesión ha cerrado automáticamente.", 
+            "info", 
+            "Sesión Expirada"
+        );
         toastShown.current = true;
-        
         window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);

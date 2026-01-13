@@ -1,48 +1,123 @@
-import { useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastProps {
   id: number;
+  title?: string;
   message: string;
   type: ToastType;
   onClose: (id: number) => void;
 }
 
-export const Toast = ({ id, message, type, onClose }: ToastProps) => {
+export const Toast = ({ id, title, message, type, onClose }: ToastProps) => {
+  const [isExiting, setIsExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Configuración de tiempos
+  const DURATION = 5000; // 5 segundos
+
   useEffect(() => {
+    if (isPaused) return;
+
     const timer = setTimeout(() => {
-      onClose(id);
-    }, 4000);
+      handleClose();
+    }, DURATION);
 
     return () => clearTimeout(timer);
-  }, [id, onClose]);
+  }, [id, isPaused]);
 
-  const styles = {
-    success: "bg-white border-green-500 text-gray-800 shadow-[0_4px_12px_rgba(34,197,94,0.15)]",
-    error: "bg-white border-red-500 text-gray-800 shadow-[0_4px_12px_rgba(239,68,68,0.15)]",
-    info: "bg-white border-blue-500 text-gray-800 shadow-[0_4px_12px_rgba(59,130,246,0.15)]"
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => onClose(id), 300); // Esperar animación de salida
   };
 
-  const icons = {
-    success: <CheckCircle size={18} className="text-green-500 flex-shrink-0" />,
-    error: <AlertCircle size={18} className="text-red-500 flex-shrink-0" />,
-    info: <Info size={18} className="text-blue-500 flex-shrink-0" />
+  const variants = {
+    success: {
+      icon: <CheckCircle className="w-6 h-6 text-green-500" />,
+      border: "border-l-green-500",
+      bg: "bg-white",
+      progress: "bg-green-500"
+    },
+    error: {
+      icon: <XCircle className="w-6 h-6 text-red-500" />,
+      border: "border-l-red-500",
+      bg: "bg-white",
+      progress: "bg-red-500"
+    },
+    warning: {
+      icon: <AlertTriangle className="w-6 h-6 text-yellow-500" />,
+      border: "border-l-yellow-500",
+      bg: "bg-white",
+      progress: "bg-yellow-500"
+    },
+    info: {
+      icon: <Info className="w-6 h-6 text-blue-500" />,
+      border: "border-l-blue-500",
+      bg: "bg-white",
+      progress: "bg-blue-500"
+    }
   };
+
+  const currentVariant = variants[type];
 
   return (
-    <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 rounded-lg border-l-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] max-w-[400px] mb-2 sm:mb-3 transition-all animate-[slideIn_0.3s_ease-out] relative bg-white border border-gray-100 ${styles[type]}`}>
-      {icons[type]}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs sm:text-sm font-semibold truncate">{message}</p>
+    <div 
+      className={`
+        relative w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-lg border border-gray-100 mb-3
+        transition-all duration-300 ease-in-out transform
+        ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0 animate-[slideIn_0.3s_ease-out]'}
+        border-l-4 ${currentVariant.border}
+      `}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="p-4 flex gap-4">
+        {/* Ícono */}
+        <div className="flex-shrink-0 pt-0.5">
+          {currentVariant.icon}
+        </div>
+
+        {/* Contenido */}
+        <div className="flex-1 min-w-0">
+          {title && (
+            <h4 className="text-sm font-bold text-gray-900 mb-1 leading-none">
+              {title}
+            </h4>
+          )}
+          <p className="text-sm text-gray-600 leading-snug">
+            {message}
+          </p>
+        </div>
+
+        {/* Botón Cerrar */}
+        <button 
+          onClick={handleClose}
+          className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors p-1"
+        >
+          <X size={18} />
+        </button>
       </div>
-      <button 
-        onClick={() => onClose(id)} 
-        className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-      >
-        <X size={16} />
-      </button>
+
+      {/* Barra de Progreso */}
+      <div className="absolute bottom-0 left-0 h-1 w-full bg-gray-100">
+        <div 
+          className={`h-full ${currentVariant.progress} transition-all duration-100 ease-linear`}
+          style={{ 
+            width: '100%',
+            animation: isPaused ? 'none' : `shrink ${DURATION}ms linear forwards`
+          }}
+        />
+      </div>
+
+      {/* Estilo inline para la animación de la barra */}
+      <style>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };

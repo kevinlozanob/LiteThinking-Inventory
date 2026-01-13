@@ -5,12 +5,14 @@ import { PasswordField } from '../molecules/PasswordField';
 import { login as LoginService } from '../../services/authService'; 
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../context/ToastContext';
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const { login } = useAuth(); 
   const navigate = useNavigate();
@@ -22,16 +24,29 @@ export const LoginForm = () => {
 
     try {
       const data = await LoginService(email, password);
-
-      login(data.access, data.is_admin, data.email); 
-      
+      login(data.access, data.is_admin, data.email);
+      showToast(
+        "Has ingresado correctamente al sistema.", 
+        "success", 
+        `¡Bienvenido, ${data.email.split('@')[0]}!`
+      ); 
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Error login:", err);
       if (err.response?.status === 401) {
-        setError("Correo o contraseña incorrectos.");
+        // Feedback de Error Específico
+        showToast(
+          "El correo o la contraseña no coinciden.",
+          "error",
+          "Credenciales Incorrectas"
+        );
       } else {
-        setError("Error de conexión. Intente más tarde.");
+        // Feedback de Error de Red
+        showToast(
+          "No pudimos conectar con el servidor. Revisa tu internet.",
+          "warning",
+          "Error de Conexión"
+        );
       }
     } finally {
       setLoading(false);

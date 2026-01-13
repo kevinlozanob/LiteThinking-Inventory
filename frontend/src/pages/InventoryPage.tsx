@@ -67,11 +67,19 @@ export default function InventoryPage() {
     setSendingEmail(true);
     try {
         await sendEmailReport(email, nit);
-        showToast(`Reporte enviado correctamente a ${email}`, 'success'); 
+        showToast(
+            `El PDF ha sido enviado a ${email}. Revisa Spam si no llega.`, 
+            'success', 
+            "¡Correo Enviado!"
+        ); 
         setIsEmailModalOpen(false);
     } catch (error) {
         console.error(error);
-        showToast("Hubo un error enviando el correo.", 'error');
+        showToast(
+            "El servicio de correo falló. Intenta más tarde.", 
+            'error',
+            "Error de Envío"
+        );
     } finally {
         setSendingEmail(false);
     }
@@ -91,11 +99,19 @@ export default function InventoryPage() {
     try {
       await deleteProducto(itemToDelete.id);
       setProductos(prev => prev.filter(p => p.id !== itemToDelete.id));
-      showToast("Producto eliminado correctamente", "success");
+      showToast(
+        "El producto se eliminó permanentemente.", 
+        "info", 
+        "Eliminado"
+      );
       setItemToDelete({ isOpen: false, id: 0, nombre: '' });
     } catch (error) {
       console.error(error);
-      showToast("Error eliminando el producto", "error");
+      showToast(
+        "No se pudo eliminar el item. ¿Tienes internet?", 
+        "error",
+        "Error al Eliminar"
+      );
     } finally {
       setDeletingProduct(false);
     }

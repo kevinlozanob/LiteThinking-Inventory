@@ -55,7 +55,11 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
             
             if (audioBlob.size < 1000) { 
-                showToast("Audio muy corto, intenta de nuevo", 'info');
+                showToast(
+                    "El audio fue muy corto o hubo silencio.", 
+                    'warning', 
+                    "No te escuché bien"
+                );
                 return;
             }
 
@@ -92,10 +96,18 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             precio: data.precio ? String(data.precio) : ''
         });
         
-        showToast("¡Entendido! Formulario llenado.", 'success');
+        showToast(
+            "He rellenado el formulario con lo que dijiste.", 
+            'success', 
+            "¡Audio Procesado!"
+        );
     } catch (error) {
         console.error(error);
-        showToast("No entendí el audio, intenta de nuevo.", 'error');
+        showToast(
+            "Hubo ruido de fondo o no entendí los datos.", 
+            'error', 
+            "Intenta dictar más despacio"
+        );
     } finally {
         setIsProcessingVoice(false);
     }
@@ -131,10 +143,18 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         empresa: empresaNit,
         precios: preciosJSON
       });
-      showToast("Producto creado", 'success');
+      showToast(
+        `El producto "${formData.nombre}" ya está en la lista.`, 
+        'success', 
+        "Producto Guardado"
+      );
       onSuccess();
     } catch (err) {
-      showToast("Error al guardar.", 'error');
+      showToast(
+        "Verifica que el código no esté repetido.", 
+        'error', 
+        "No se pudo guardar"
+      );
     } finally {
       setLoading(false);
     }
