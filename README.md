@@ -42,9 +42,6 @@ Para poblar la base de datos con usuarios y productos de ejemplo, ejecute el sig
 
 
 
-```bash
-docker compose exec backend python manage.py seed_db
-```
 
 ## Funcionalidad Adicional (Propuesta Técnica)
 
@@ -72,7 +69,13 @@ Para replicar el entorno de desarrollo:
     ```
 
 2.  **Configurar variables de entorno:**
-    Configurar variables de entorno a partir de .env.example.
+    
+    Configurar variables de entorno a partir de .env
+    En la raíz del proyecto se debe crear un archivo **`.env`**.  
+    Este archivo será enviado **adjunto por correo electrónico** y **debe conservar exactamente el nombre `.env`**, sin cambios, para que las variables de entorno funcionen correctamente.
+
+    Copie **todo el contenido del archivo recibido** y péguelo dentro del `.env` creado, sin modificar nombres, valores ni estructura.
+
 
 
 3.  **Desplegar con Docker:**
