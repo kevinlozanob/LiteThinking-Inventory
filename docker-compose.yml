@@ -27,10 +27,12 @@ services:
       - "8000:8000"
     
     env_file:
-      - .env
+      - path: backend/.env
+        required: false
+      - path: .env
+        required: false
       
     environment:
-      
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
