@@ -19,7 +19,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: 1, 
-      text: "¡Hola! Soy **LiteBot**. 🤖\n\nPuedo analizar tu inventario, calcular presupuestos en USD/COP/EUR o buscar productos por código.\n\n¿En qué te ayudo hoy?", 
+      text: "¡Hola! Soy **LiteBot**. \n\nPuedo analizar tu inventario, calcular presupuestos en USD/COP/EUR o buscar productos por código.\n\n¿En qué te ayudo hoy?", 
       isBot: true,
       timestamp: new Date()
     }
@@ -62,7 +62,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
       
       setMessages(prev => [...prev, { id: Date.now() + 1, text: respuesta, isBot: true, timestamp: new Date() }]);
     } catch (error) {
-      setMessages(prev => [...prev, { id: Date.now() + 1, text: "⚠️ Error de conexión. Intenta de nuevo.", isBot: true, timestamp: new Date() }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, text: "Error de conexión. Intenta de nuevo.", isBot: true, timestamp: new Date() }]);
     } finally {
       setLoading(false);
     }

@@ -128,7 +128,7 @@ def analizar_texto_producto(texto_voz):
         )
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
-        print(f"Error IA Llama: {str(e)}")
+        #print(f"Error IA Llama: {str(e)}")
         return None
 
 def procesar_audio_con_ia(archivo_audio):
@@ -146,10 +146,10 @@ def procesar_audio_con_ia(archivo_audio):
         )
         
         texto_transcrito = transcription.text
-        print(f"Texto detectado por Whisper: {texto_transcrito}")
+        #print(f"Texto detectado por Whisper: {texto_transcrito}")
         
         return analizar_texto_producto(texto_transcrito)
 
     except Exception as e:
-        print(f"Error IA Audio: {str(e)}")
+        #(f"Error IA Audio: {str(e)}")
         return None

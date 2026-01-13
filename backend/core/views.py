@@ -147,7 +147,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         sender_email = config('RESEND_FROM_EMAIL', default='') 
 
         if not resend_api_key:
-             print(f"MOCK EMAIL TO: {email_destino}")
+             #print(f"MOCK EMAIL TO: {email_destino}")
              return Response({"message": "Correo simulado (Falta API Key)"})
 
         url = "https://api.resend.com/emails"

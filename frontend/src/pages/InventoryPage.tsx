@@ -6,11 +6,12 @@ import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { EditProductModal } from '../components/organisms/EditProductModal';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil } from 'lucide-react';
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil, Upload } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
 import { ConfirmModal } from '../components/atoms/ConfirmModal';
 import { ChatWidget } from '../components/organisms/ChatWidget';
+import { BulkUploadModal } from '../components/organisms/BulkUploadModal';
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -26,6 +27,9 @@ export default function InventoryPage() {
   // LOGICA MODAL EMAIL
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // LOGICA MODAL CARGA MASIVA (EXCEL)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // LOGICA MODAL ELIMINAR
   const [itemToDelete, setItemToDelete] = useState<{ isOpen: boolean; id: number; nombre: string }>({
@@ -141,7 +145,8 @@ export default function InventoryPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
       
-      {/* MODALES */}
+      {/* --- MODALES --- */}
+
       <EmailModal 
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
@@ -163,6 +168,16 @@ export default function InventoryPage() {
         onClose={() => setIsEditModalOpen(false)}
         product={itemToEdit}
         onUpdate={handleUpdateProduct}
+      />
+
+      {/* MODAL DE CARGA MASIVA */}
+      <BulkUploadModal 
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        empresaNit={nit!}
+        onSuccess={() => {
+            cargarDataCompuesto();
+        }}
       />
 
       <div className="max-w-6xl mx-auto">
@@ -206,14 +221,26 @@ export default function InventoryPage() {
             </Button>
             
             {isAdmin && (
-                <Button 
-                  onClick={() => setShowForm(!showForm)} 
-                  variant="primary" 
-                  className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm"
-                  icon={<Plus size={14}/>}
-                >
-                    {showForm ? 'Cerrar' : <><span className="hidden sm:inline">Agregar Producto</span><span className="sm:hidden">Agregar</span></>}
-                </Button>
+                <>
+                    {/* BOTÓN EXCEL (Solo Admin) */}
+                    <Button
+                        onClick={() => setIsBulkModalOpen(true)}
+                        className="w-full sm:w-auto px-3 sm:px-4 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                        icon={<Upload size={14} />}
+                    >
+                         <span className="hidden sm:inline">Excel</span>
+                         <span className="sm:hidden">Excel</span>
+                    </Button>
+
+                    <Button 
+                      onClick={() => setShowForm(!showForm)} 
+                      variant="primary" 
+                      className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm"
+                      icon={<Plus size={14}/>}
+                    >
+                        {showForm ? 'Cerrar' : <><span className="hidden sm:inline">Agregar Producto</span><span className="sm:hidden">Agregar</span></>}
+                    </Button>
+                </>
             )}
           </div>
         </header>

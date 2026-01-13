@@ -713,11 +713,25 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\backend\core\serializers.py
 ========================================
 from rest_framework import serializers
 from .models import EmpresaModel, ProductoModel
+import re
 
 class EmpresaSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmpresaModel
         fields = '__all__'
+
+    def validate_nit(self, value):
+        if not re.match(r'^[0-9-]+$', value):
+            raise serializers.ValidationError("El NIT solo puede contener nÃºmeros y guiones (-).")
+        return value
+
+    def validate_telefono(self, value):
+        if len(value) < 7:
+            raise serializers.ValidationError("El telÃ©fono es muy corto (mÃ­nimo 7 dÃ­gitos).")
+        
+        if not re.match(r'^\+?[0-9]+$', value):
+             raise serializers.ValidationError("El telÃ©fono debe contener solo nÃºmeros.")
+        return value
 
 class ProductoSerializer(serializers.ModelSerializer):
     
@@ -725,11 +739,32 @@ class ProductoSerializer(serializers.ModelSerializer):
         model = ProductoModel
         fields = '__all__'
         
+    def validate_codigo(self, value):
+        if not re.match(r'^[A-Za-z0-9-_]+$', value):
+            raise serializers.ValidationError("El cÃ³digo solo acepta letras, nÃºmeros, guiones (-) y piso (_).")
+        return value
+
     def validate_precios(self, value):
 
         if not isinstance(value, dict):
-            raise serializers.ValidationError("El campo precios debe ser un objeto JSON (diccionario).")
+            raise serializers.ValidationError("El formato de precios es invÃ¡lido. Debe ser un objeto JSON.")
+        
+        if not value:
+            raise serializers.ValidationError("Debes agregar al menos un precio.")
+
+        for moneda, monto in value.items():
+            if not re.match(r'^[A-Z]{3}$', moneda):
+                raise serializers.ValidationError(f"La moneda '{moneda}' no es vÃ¡lida. Usa cÃ³digos ISO (ej: USD, COP).")
+            
+            try:
+                monto_float = float(monto)
+                if monto_float < 0:
+                    raise serializers.ValidationError(f"El precio en {moneda} no puede ser negativo.")
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(f"El valor para {moneda} debe ser un nÃºmero vÃ¡lido.")
+
         return value
+
 class SystemStatusSerializer(serializers.Serializer):
     api = serializers.CharField()
     version = serializers.CharField()
@@ -1673,6 +1708,7 @@ ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\package.json
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.13.2",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -2222,51 +2258,126 @@ Input.displayName = 'Input';
 ========================================
 ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\atoms\Toast.tsx
 ========================================
-import { useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastProps {
   id: number;
+  title?: string;
   message: string;
   type: ToastType;
   onClose: (id: number) => void;
 }
 
-export const Toast = ({ id, message, type, onClose }: ToastProps) => {
+export const Toast = ({ id, title, message, type, onClose }: ToastProps) => {
+  const [isExiting, setIsExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // ConfiguraciÃ³n de tiempos
+  const DURATION = 5000; // 5 segundos
+
   useEffect(() => {
+    if (isPaused) return;
+
     const timer = setTimeout(() => {
-      onClose(id);
-    }, 4000);
+      handleClose();
+    }, DURATION);
 
     return () => clearTimeout(timer);
-  }, [id, onClose]);
+  }, [id, isPaused]);
 
-  const styles = {
-    success: "bg-white border-green-500 text-gray-800 shadow-[0_4px_12px_rgba(34,197,94,0.15)]",
-    error: "bg-white border-red-500 text-gray-800 shadow-[0_4px_12px_rgba(239,68,68,0.15)]",
-    info: "bg-white border-blue-500 text-gray-800 shadow-[0_4px_12px_rgba(59,130,246,0.15)]"
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => onClose(id), 300); // Esperar animaciÃ³n de salida
   };
 
-  const icons = {
-    success: <CheckCircle size={18} className="text-green-500 flex-shrink-0" />,
-    error: <AlertCircle size={18} className="text-red-500 flex-shrink-0" />,
-    info: <Info size={18} className="text-blue-500 flex-shrink-0" />
+  const variants = {
+    success: {
+      icon: <CheckCircle className="w-6 h-6 text-green-500" />,
+      border: "border-l-green-500",
+      bg: "bg-white",
+      progress: "bg-green-500"
+    },
+    error: {
+      icon: <XCircle className="w-6 h-6 text-red-500" />,
+      border: "border-l-red-500",
+      bg: "bg-white",
+      progress: "bg-red-500"
+    },
+    warning: {
+      icon: <AlertTriangle className="w-6 h-6 text-yellow-500" />,
+      border: "border-l-yellow-500",
+      bg: "bg-white",
+      progress: "bg-yellow-500"
+    },
+    info: {
+      icon: <Info className="w-6 h-6 text-blue-500" />,
+      border: "border-l-blue-500",
+      bg: "bg-white",
+      progress: "bg-blue-500"
+    }
   };
+
+  const currentVariant = variants[type];
 
   return (
-    <div className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 rounded-lg border-l-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] max-w-[400px] mb-2 sm:mb-3 transition-all animate-[slideIn_0.3s_ease-out] relative bg-white border border-gray-100 ${styles[type]}`}>
-      {icons[type]}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs sm:text-sm font-semibold truncate">{message}</p>
+    <div 
+      className={`
+        relative w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-lg border border-gray-100 mb-3
+        transition-all duration-300 ease-in-out transform
+        ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0 animate-[slideIn_0.3s_ease-out]'}
+        border-l-4 ${currentVariant.border}
+      `}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="p-4 flex gap-4">
+        {/* Ãcono */}
+        <div className="flex-shrink-0 pt-0.5">
+          {currentVariant.icon}
+        </div>
+
+        {/* Contenido */}
+        <div className="flex-1 min-w-0">
+          {title && (
+            <h4 className="text-sm font-bold text-gray-900 mb-1 leading-none">
+              {title}
+            </h4>
+          )}
+          <p className="text-sm text-gray-600 leading-snug">
+            {message}
+          </p>
+        </div>
+
+        {/* BotÃ³n Cerrar */}
+        <button 
+          onClick={handleClose}
+          className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors p-1"
+        >
+          <X size={18} />
+        </button>
       </div>
-      <button 
-        onClick={() => onClose(id)} 
-        className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-      >
-        <X size={16} />
-      </button>
+
+      {/* Barra de Progreso */}
+      <div className="absolute bottom-0 left-0 h-1 w-full bg-gray-100">
+        <div 
+          className={`h-full ${currentVariant.progress} transition-all duration-100 ease-linear`}
+          style={{ 
+            width: '100%',
+            animation: isPaused ? 'none' : `shrink ${DURATION}ms linear forwards`
+          }}
+        />
+      </div>
+
+      {/* Estilo inline para la animaciÃ³n de la barra */}
+      <style>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -2456,7 +2567,11 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
             
             if (audioBlob.size < 1000) { 
-                showToast("Audio muy corto, intenta de nuevo", 'info');
+                showToast(
+                    "El audio fue muy corto o hubo silencio.", 
+                    'warning', 
+                    "No te escuchÃ© bien"
+                );
                 return;
             }
 
@@ -2493,10 +2608,18 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
             precio: data.precio ? String(data.precio) : ''
         });
         
-        showToast("Â¡Entendido! Formulario llenado.", 'success');
+        showToast(
+            "He rellenado el formulario con lo que dijiste.", 
+            'success', 
+            "Â¡Audio Procesado!"
+        );
     } catch (error) {
         console.error(error);
-        showToast("No entendÃ­ el audio, intenta de nuevo.", 'error');
+        showToast(
+            "Hubo ruido de fondo o no entendÃ­ los datos.", 
+            'error', 
+            "Intenta dictar mÃ¡s despacio"
+        );
     } finally {
         setIsProcessingVoice(false);
     }
@@ -2532,10 +2655,18 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
         empresa: empresaNit,
         precios: preciosJSON
       });
-      showToast("Producto creado", 'success');
+      showToast(
+        `El producto "${formData.nombre}" ya estÃ¡ en la lista.`, 
+        'success', 
+        "Producto Guardado"
+      );
       onSuccess();
     } catch (err) {
-      showToast("Error al guardar.", 'error');
+      showToast(
+        "Verifica que el cÃ³digo no estÃ© repetido.", 
+        'error', 
+        "No se pudo guardar"
+      );
     } finally {
       setLoading(false);
     }
@@ -3465,12 +3596,14 @@ import { PasswordField } from '../molecules/PasswordField';
 import { login as LoginService } from '../../services/authService'; 
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../context/ToastContext';
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const { login } = useAuth(); 
   const navigate = useNavigate();
@@ -3482,16 +3615,29 @@ export const LoginForm = () => {
 
     try {
       const data = await LoginService(email, password);
-
-      login(data.access, data.is_admin, data.email); 
-      
+      login(data.access, data.is_admin, data.email);
+      showToast(
+        "Has ingresado correctamente al sistema.", 
+        "success", 
+        `Â¡Bienvenido, ${data.email.split('@')[0]}!`
+      ); 
       navigate('/dashboard');
     } catch (err: any) {
       console.error("Error login:", err);
       if (err.response?.status === 401) {
-        setError("Correo o contraseÃ±a incorrectos.");
+        // Feedback de Error EspecÃ­fico
+        showToast(
+          "El correo o la contraseÃ±a no coinciden.",
+          "error",
+          "Credenciales Incorrectas"
+        );
       } else {
-        setError("Error de conexiÃ³n. Intente mÃ¡s tarde.");
+        // Feedback de Error de Red
+        showToast(
+          "No pudimos conectar con el servidor. Revisa tu internet.",
+          "warning",
+          "Error de ConexiÃ³n"
+        );
       }
     } finally {
       setLoading(false);
@@ -3751,37 +3897,52 @@ export const useAuth = () => {
 ========================================
 ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\context\ToastContext.tsx
 ========================================
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Toast, type ToastType } from '../components/atoms/Toast';
 
 interface ToastContextType {
-  showToast: (message: string, type: ToastType) => void;
+  // Ahora aceptamos tÃ­tulo opcional
+  showToast: (message: string, type: ToastType, title?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
-  const [toasts, setToasts] = useState<{ id: number; message: string; type: ToastType }[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: ToastType; title?: string }[]>([]);
 
-  const showToast = (message: string, type: ToastType) => {
+  const showToast = useCallback((message: string, type: ToastType, title?: string) => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
+    // Si no mandan tÃ­tulo, ponemos uno por defecto segÃºn el tipo
+    const defaultTitle = !title ? getDefaultTitle(type) : title;
+    
+    setToasts((prev) => [...prev, { id, message, type, title: defaultTitle }]);
+  }, []);
 
-  const removeToast = (id: number) => {
+  const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const getDefaultTitle = (type: ToastType) => {
+    switch (type) {
+      case 'success': return 'Â¡OperaciÃ³n Exitosa!';
+      case 'error': return 'OcurriÃ³ un error';
+      case 'warning': return 'Advertencia';
+      case 'info': return 'InformaciÃ³n';
+      default: return '';
+    }
   };
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Contenedor Flotante - Responsive */}
-      <div className="fixed top-4 left-4 right-4 sm:left-auto sm:top-6 sm:right-6 z-[9999] flex flex-col items-center sm:items-end pointer-events-none">
-        <div className="pointer-events-auto w-full sm:w-auto">
+      {/* Contenedor Flotante - Arriba a la derecha (EstÃ¡ndar Senior) */}
+      <div className="fixed top-4 right-4 z-[99999] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
+        <div className="pointer-events-auto">
           {toasts.map((t) => (
             <Toast 
               key={t.id} 
               id={t.id} 
+              title={t.title}
               message={t.message} 
               type={t.type} 
               onClose={removeToast} 
@@ -3952,11 +4113,19 @@ export default function InventoryPage() {
     setSendingEmail(true);
     try {
         await sendEmailReport(email, nit);
-        showToast(`Reporte enviado correctamente a ${email}`, 'success'); 
+        showToast(
+            `El PDF ha sido enviado a ${email}. Revisa Spam si no llega.`, 
+            'success', 
+            "Â¡Correo Enviado!"
+        ); 
         setIsEmailModalOpen(false);
     } catch (error) {
         console.error(error);
-        showToast("Hubo un error enviando el correo.", 'error');
+        showToast(
+            "El servicio de correo fallÃ³. Intenta mÃ¡s tarde.", 
+            'error',
+            "Error de EnvÃ­o"
+        );
     } finally {
         setSendingEmail(false);
     }
@@ -3976,11 +4145,19 @@ export default function InventoryPage() {
     try {
       await deleteProducto(itemToDelete.id);
       setProductos(prev => prev.filter(p => p.id !== itemToDelete.id));
-      showToast("Producto eliminado correctamente", "success");
+      showToast(
+        "El producto se eliminÃ³ permanentemente.", 
+        "info", 
+        "Eliminado"
+      );
       setItemToDelete({ isOpen: false, id: 0, nombre: '' });
     } catch (error) {
       console.error(error);
-      showToast("Error eliminando el producto", "error");
+      showToast(
+        "No se pudo eliminar el item. Â¿Tienes internet?", 
+        "error",
+        "Error al Eliminar"
+      );
     } finally {
       setDeletingProduct(false);
     }
@@ -4228,9 +4405,12 @@ export default function Login() {
 
   useEffect(() => {
     if (searchParams.get('expired') === 'true' && !toastShown.current) {
-        showToast("Tu sesiÃ³n ha caducado. Por favor inicia sesiÃ³n nuevamente.", "info");
+        showToast(
+            "Por seguridad, tu sesiÃ³n ha cerrado automÃ¡ticamente.", 
+            "info", 
+            "SesiÃ³n Expirada"
+        );
         toastShown.current = true;
-        
         window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
@@ -4469,5 +4649,54 @@ export const chatWithInventory = async (nit: string, historial: any): Promise<st
     historial
   });
   return response.data.respuesta;
+};
+
+========================================
+ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\utils\excelGenerator.ts
+========================================
+import ExcelJS from 'exceljs';
+
+export const generateAndDownloadTemplate = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Plantilla Carga Masiva');
+
+  worksheet.columns = [
+    { header: 'CODIGO', key: 'codigo', width: 15 },
+    { header: 'NOMBRE', key: 'nombre', width: 30 },
+    { header: 'CARACTERISTICAS', key: 'caracteristicas', width: 50 },
+    { header: 'PRECIO', key: 'precio', width: 15 },
+    { header: 'MONEDA', key: 'moneda', width: 10 },
+  ];
+
+  worksheet.getRow(1).font = { bold: true };
+
+  worksheet.addRow({
+    codigo: 'EJ-001',
+    nombre: 'Teclado MecÃ¡nico',
+    caracteristicas: 'Luces RGB, Switch Blue',
+    precio: 45,
+    moneda: 'USD'
+  });
+
+  worksheet.addRow({
+    codigo: 'EJ-002',
+    nombre: 'Monitor 24"',
+    caracteristicas: '1080p, 75Hz, HDMI',
+    precio: 450000,
+    moneda: 'COP'
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'plantilla_inventario_obligatoria.xlsx');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
