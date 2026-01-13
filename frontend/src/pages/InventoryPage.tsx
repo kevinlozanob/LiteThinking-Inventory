@@ -4,12 +4,13 @@ import { getProductos, deleteProducto, downloadPDF, sendEmailReport, updateProdu
 import { getEmpresaByNit, type Empresa } from '../services/empresaService'; 
 import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
-import { EditProductModal } from '../components/organisms/EditProductModal'; // Importar Modal
+import { EditProductModal } from '../components/organisms/EditProductModal';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil } from 'lucide-react'; // Importar Pencil
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
 import { ConfirmModal } from '../components/atoms/ConfirmModal';
+import { ChatWidget } from '../components/organisms/ChatWidget';
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -317,6 +318,9 @@ export default function InventoryPage() {
             )}
         </div>
       </div>
+      
+      {nit && <ChatWidget empresaNit={nit} />}
+      
     </div>
   );
 }

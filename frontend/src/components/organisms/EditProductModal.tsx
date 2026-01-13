@@ -129,7 +129,6 @@ export const EditProductModal = ({ isOpen, onClose, product, onUpdate }: EditPro
                             <option value="COP">COP</option>
                             <option value="USD">USD</option>
                             <option value="EUR">EUR</option>
-                            <option value="MXN">MXN</option>
                         </select>
                     </div>
 

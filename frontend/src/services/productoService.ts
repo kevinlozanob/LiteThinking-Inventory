@@ -68,3 +68,11 @@ export const updateProducto = async (id: number, data: Partial<Producto>): Promi
   const response = await api.patch<Producto>(`productos/${id}/`, payload);
   return response.data;
 };
+
+export const chatWithInventory = async (nit: string, historial: any): Promise<string> => {
+  const response = await api.post<{ respuesta: string }>('productos/chat_inventario/', {
+    nit,
+    historial
+  });
+  return response.data.respuesta;
+};

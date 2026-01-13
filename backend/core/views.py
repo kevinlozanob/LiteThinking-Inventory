@@ -9,7 +9,7 @@ from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer, SystemStatusSerializer
 
 from .reports import generar_pdf_inventario   
-from .ai import generar_descripcion_ia, procesar_audio_con_ia
+from .ai import generar_descripcion_ia, procesar_audio_con_ia, chat_con_inventario
 from .permissions import IsAdminOrReadOnly   
 
 from .utils import get_email_template
@@ -37,6 +37,31 @@ class ProductoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(empresa_id=empresa_nit)
         return queryset
     
+    @action(detail=False, methods=['post'])
+    def chat_inventario(self, request):
+        nit = request.data.get('nit')
+        historial = request.data.get('historial') 
+        
+        if not nit or not historial:
+            return Response({"error": "Faltan datos (nit o historial)"}, status=400)
+
+        productos = self.get_queryset().filter(empresa_id=nit)
+        
+        if not productos.exists():
+            return Response({"respuesta": "No hay productos registrados en esta empresa."})
+
+        datos_minificados = []
+        for p in productos:
+            datos_minificados.append({
+                "cod": p.codigo,
+                "n": p.nombre,
+                "c": p.caracteristicas,
+                "p": p.precios
+            })
+
+        respuesta_ia = chat_con_inventario(historial, datos_minificados)
+        
+        return Response({"respuesta": respuesta_ia})
     @action(detail=False, methods=['post'])
     def interpretar_voz(self, request):
         audio_file = request.FILES.get('audio')
