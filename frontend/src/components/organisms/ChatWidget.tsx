@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 
 interface ChatWidgetProps {
   empresaNit: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 interface Message {
@@ -14,7 +15,7 @@ interface Message {
   timestamp: Date;
 }
 
-export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
+export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { // Agregué onOpenChange aquí
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -29,6 +30,15 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Mantenemos tu función toggleChat si la usas, o usamos setIsOpen directo
+  const toggleChat = () => {
+      const newState = !isOpen;
+      setIsOpen(newState);
+      if (onOpenChange) {
+          onOpenChange(newState);
+      }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -36,7 +46,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
   useEffect(() => {
     if (isOpen) {
         scrollToBottom();
-        setTimeout(() => inputRef.current?.focus(), 100); // Auto-focus al abrir
+        setTimeout(() => inputRef.current?.focus(), 100); 
     }
   }, [messages, isOpen]);
 
@@ -53,6 +63,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
     setLoading(true);
 
     try {
+      // Nota: Aquí asumo que chatWithInventory maneja el historial como lista de objetos
       const historialParaEnviar = newHistory.slice(-15).map(m => ({
         role: m.isBot ? 'assistant' : 'user',
         content: m.text
@@ -77,13 +88,14 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
       }]);
   };
 
-  // Formateador de hora
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[9999] flex flex-col items-end font-sans">
+    // CAMBIO CLAVE 1: 'pointer-events-none' en el contenedor padre.
+    // Esto hace que los clicks pasen a través del área vacía hacia la tabla de abajo.
+    <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[9999] flex flex-col items-end font-sans pointer-events-none">
       
       {/* --- VENTANA DEL CHAT --- */}
       <div className={`
@@ -95,9 +107,12 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
         bg-white sm:rounded-2xl shadow-2xl 
         flex flex-col overflow-hidden
         border border-gray-100
+        
+        /* CAMBIO CLAVE 2: 'pointer-events-auto' para poder interactuar con el chat */
+        pointer-events-auto
       `}>
         
-        {/* HEADER: Gradiente Premium */}
+        {/* HEADER */}
         <div className="bg-gradient-to-r from-[#E6C200] to-[#F4D03F] p-4 flex justify-between items-center shadow-md z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 shadow-inner">
@@ -122,7 +137,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
                 <Trash2 size={18} />
             </button>
             <button 
-                onClick={() => setIsOpen(false)} 
+                onClick={toggleChat} 
                 className="p-2 hover:bg-black/10 rounded-full transition-colors text-yellow-900"
             >
                 {window.innerWidth < 640 ? <ChevronDown size={24} /> : <X size={20} />}
@@ -130,10 +145,8 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
           </div>
         </div>
 
-        {/* BODY: Chat Area */}
+        {/* BODY */}
         <div className="flex-1 overflow-y-auto p-4 bg-[#F9FAFB] space-y-4 scroll-smooth">
-            
-            {/* Aviso Legal Discreto */}
             <div className="text-center">
                 <span className="text-[10px] text-gray-400 bg-gray-100 px-3 py-1 rounded-full border border-gray-200 uppercase tracking-wider font-semibold">
                     Powered by Nicklcs
@@ -142,14 +155,11 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
 
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'} animate-[fadeIn_0.3s_ease-out]`}>
-                
-                {/* Avatar Bot */}
                 {msg.isBot && (
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#E6C200] flex items-center justify-center mr-2 mt-auto shadow-sm flex-shrink-0">
                         <Bot size={14} className="text-black sm:w-4 sm:h-4"/>
                     </div>
                 )}
-
                 <div className={`
                     max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 rounded-2xl text-sm leading-relaxed shadow-sm relative group
                     ${msg.isBot 
@@ -157,7 +167,6 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
                         : 'bg-black text-white rounded-br-none from-gray-900 to-black bg-gradient-to-br'
                     }
                 `}>
-                  {/* Markdown Rendering */}
                   <div className={`
                         prose prose-sm max-w-none 
                         ${msg.isBot ? 'prose-headings:text-gray-800 prose-strong:text-black' : 'prose-invert prose-p:text-gray-100'}
@@ -165,8 +174,6 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
                   `}>
                     {msg.isBot ? <ReactMarkdown>{msg.text}</ReactMarkdown> : msg.text}
                   </div>
-                  
-                  {/* Timestamp */}
                   <span className={`
                     text-[10px] absolute -bottom-5 min-w-[60px] opacity-0 group-hover:opacity-100 transition-opacity
                     ${msg.isBot ? 'left-0 text-gray-400' : 'right-0 text-gray-400 text-right'}
@@ -177,7 +184,6 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
               </div>
             ))}
 
-            {/* Typing Indicator Animation */}
             {loading && (
               <div className="flex justify-start animate-[fadeIn_0.3s_ease-out]">
                  <div className="w-8 h-8 rounded-full bg-[#E6C200] flex items-center justify-center mr-2 shadow-sm">
@@ -193,7 +199,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
             <div ref={messagesEndRef} className="h-2" />
         </div>
 
-        {/* FOOTER: Input Area */}
+        {/* FOOTER */}
         <div className="p-3 sm:p-4 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
           <form onSubmit={handleSend} className="relative flex items-center gap-2">
             <input 
@@ -201,34 +207,15 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pregunta sobre precios, stock..."
-              className="
-                w-full pl-4 pr-12 py-3.5 
-                bg-gray-50 border border-gray-200 rounded-xl
-                text-sm text-gray-800 placeholder-gray-400
-                focus:outline-none focus:ring-2 focus:ring-[#E6C200] focus:bg-white
-                transition-all duration-200 shadow-inner
-              "
+              className="w-full pl-4 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E6C200] focus:bg-white transition-all duration-200 shadow-inner"
               disabled={loading}
             />
-            
             <button 
                 type="submit" 
                 disabled={loading || !input.trim()} 
-                className={`
-                    absolute right-2 top-1/2 -translate-y-1/2
-                    w-9 h-9 flex items-center justify-center rounded-lg 
-                    transition-all duration-200
-                    ${loading || !input.trim() 
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-[#E6C200] text-black hover:bg-[#D4B200] hover:scale-105 shadow-md active:scale-95'
-                    }
-                `}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 ${loading || !input.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#E6C200] text-black hover:bg-[#D4B200] hover:scale-105 shadow-md active:scale-95'}`}
             >
-              {loading ? (
-                 <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-              ) : (
-                <Send size={18} className={input.trim() ? 'ml-0.5' : ''}/>
-              )}
+              {loading ? (<div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>) : (<Send size={18} className={input.trim() ? 'ml-0.5' : ''}/>)}
             </button>
           </form>
           <div className="text-center mt-2 hidden sm:block">
@@ -238,10 +225,11 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
       </div>
 
       {/* --- BOTÓN FLOTANTE (FAB) --- */}
+      {/* CAMBIO CLAVE 3: 'pointer-events-auto' para poder hacer click en el botón */}
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleChat}
         className={`
-            group relative
+            group relative pointer-events-auto
             flex items-center justify-center
             w-14 h-14 sm:w-16 sm:h-16 
             bg-[#E6C200] hover:bg-[#F4D03F] text-black 
@@ -253,14 +241,13 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
         `}
       >
         <MessageSquare size={28} className="transition-transform group-hover:-translate-y-1 group-hover:rotate-[-10deg]" fill="black" />
-        
-        {/* Badge de notificación (Estético) */}
         <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-white rounded-full animate-bounce"></span>
       </button>
 
-        {/* Botón de cierre externo (Para móvil o cuando está abierto) */}
+        {/* Botón de cierre externo */}
+        {/* CAMBIO CLAVE 4: 'pointer-events-auto' */}
        <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleChat}
         className={`
             fixed bottom-4 right-4 sm:bottom-8 sm:right-8
             w-14 h-14 sm:w-16 sm:h-16 
@@ -268,6 +255,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
             rounded-full shadow-lg border border-gray-100
             flex items-center justify-center
             transition-all duration-300 z-[9998]
+            pointer-events-auto
             ${isOpen ? 'scale-100 opacity-100 rotate-0' : 'scale-0 opacity-0 rotate-[-90deg] pointer-events-none'}
         `}
       >

@@ -143,7 +143,8 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
+    // CAMBIO AQUI: Agregué 'pb-32' al final para dar espacio al Widget del Chat
+    <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8 pb-32">
       
       {/* --- MODALES --- */}
 
@@ -279,26 +280,40 @@ export default function InventoryPage() {
                                   <td className="px-4 lg:px-6 py-4 text-sm font-medium text-gray-900">{prod.codigo}</td>
                                   <td className="px-4 lg:px-6 py-4 text-sm text-gray-600">{prod.nombre}</td>
                                   <td className="px-4 lg:px-6 py-4 text-xs text-gray-500 max-w-xs truncate">{prod.caracteristicas}</td>
+                                  
+                                  {/* PRECIO ÚNICO (DESKTOP) */}
                                   <td className="px-4 lg:px-6 py-4 text-sm font-bold text-green-600">
-                                      {Object.entries(prod.precios).map(([moneda, valor]) => (
-                                          <div key={moneda} className="whitespace-nowrap">{moneda} ${valor.toLocaleString()}</div>
-                                      ))}
+                                      {(() => {
+                                          const precios = prod.precios || {};
+                                          // Prioridad: COP -> Primer precio -> $0
+                                          if (precios['COP']) {
+                                              return <div className="whitespace-nowrap">COP ${precios['COP'].toLocaleString()}</div>;
+                                          }
+                                          const keys = Object.keys(precios);
+                                          if (keys.length > 0) {
+                                              const k = keys[0];
+                                              return <div className="whitespace-nowrap">{k} ${precios[k].toLocaleString()}</div>;
+                                          }
+                                          return <div className="whitespace-nowrap">$ 0</div>;
+                                      })()}
                                   </td>
+
                                   {isAdmin && (
                                     <td className="px-4 lg:px-6 py-4 text-right whitespace-nowrap">
+                                        {/* BOTONES MEJORADOS (Desktop) - Más padding y hover */}
                                        <button 
                                          onClick={() => openEditModal(prod)}
-                                         className="text-gray-400 hover:text-blue-600 transition-colors p-1 mr-2"
+                                         className="text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-all p-2 rounded-full mr-2"
                                          title="Editar producto"
                                        >
-                                         <Pencil size={18}/>
+                                         <Pencil size={20}/>
                                        </button>
                                        <button 
                                          onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
-                                         className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                         className="text-gray-400 hover:text-red-700 hover:bg-red-50 transition-all p-2 rounded-full"
                                          title="Eliminar producto"
                                        >
-                                         <Trash2 size={18}/>
+                                         <Trash2 size={20}/>
                                        </button>
                                     </td>
                                   )}
@@ -318,16 +333,17 @@ export default function InventoryPage() {
                           <p className="text-xs text-gray-500">Código: {prod.codigo}</p>
                         </div>
                         {isAdmin && (
-                            <div className="flex -mt-2 -mr-2">
+                            <div className="flex -mt-2 -mr-2 gap-1">
+                                {/* BOTONES MEJORADOS (Mobile) - Más padding y hover */}
                                 <button 
                                     onClick={() => openEditModal(prod)}
-                                    className="text-gray-300 hover:text-blue-500 p-2"
+                                    className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-all"
                                 >
                                     <Pencil size={20}/>
                                 </button>
                                 <button 
                                     onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
-                                    className="text-gray-300 hover:text-red-500 p-2"
+                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all"
                                 >
                                     <Trash2 size={20}/>
                                 </button>
@@ -336,12 +352,20 @@ export default function InventoryPage() {
                       </div>
                       <div className="flex justify-between items-end mt-2">
                           <p className="text-xs text-gray-500 line-clamp-2 w-2/3">{prod.caracteristicas}</p>
+                          
                           <div className="text-right">
-                            {Object.entries(prod.precios).map(([moneda, valor]) => (
-                                <p key={moneda} className="text-sm font-bold text-green-600">
-                                {moneda} ${valor.toLocaleString()}
-                                </p>
-                            ))}
+                             {/* PRECIO ÚNICO (Mobile) */}
+                             {(() => {
+                                  const precios = prod.precios || {};
+                                  if (precios['COP']) {
+                                      return <p className="text-sm font-bold text-green-600">COP ${precios['COP'].toLocaleString()}</p>;
+                                  }
+                                  const keys = Object.keys(precios);
+                                  if (keys.length > 0) {
+                                      return <p className="text-sm font-bold text-green-600">{keys[0]} ${precios[keys[0]].toLocaleString()}</p>;
+                                  }
+                                  return null;
+                              })()}
                           </div>
                       </div>
                     </div>

@@ -30,9 +30,17 @@ El proyecto se estructura separando la lógica de negocio de la infraestructura 
 *   **Diseño (Requisito J):** Se aplicó la metodología **Atomic Design**, estructurando los componentes en `atoms` (Botones, Inputs), `molecules` (Campos de formulario) y `organisms` (Formularios completos, Tablas).
 *   **Estilos:** TailwindCSS para una interfaz moderna y totalmente **responsiva (Mobile-First)**.
 ---
-### 5. Cargar Datos de Prueba (Seeding)
+### 4. Cargar Datos de Prueba (Seeding)
 
 Para poblar la base de datos con usuarios y productos de ejemplo, ejecute el siguiente comando dentro del contenedor:
+
+### 5. Pruebas Unitarias (`/tests`)
+* **Implementación:** Se desarrollaron pruebas unitarias para validar la lógica de negocio y los componentes críticos del sistema.
+* **Estructura:** Las pruebas se encuentran organizadas dentro de la carpeta `/tests`, alineadas con la estructura de los módulos correspondientes.
+* **Propósito:** Verificar el comportamiento esperado del código, reducir errores y prevenir regresiones.
+
+
+
 
 ```bash
 docker compose exec backend python manage.py seed_db
