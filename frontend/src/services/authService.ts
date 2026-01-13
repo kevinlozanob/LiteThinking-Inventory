@@ -5,6 +5,7 @@ interface LoginResponse {
   access: string;
   refresh: string;
   is_admin: boolean;
+  email: string;
 }
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {

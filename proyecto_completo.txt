@@ -416,7 +416,7 @@ def analizar_texto_producto(texto_voz):
         )
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
-        print(f"Error IA Llama: {str(e)}")
+        #print(f"Error IA Llama: {str(e)}")
         return None
 
 def procesar_audio_con_ia(archivo_audio):
@@ -434,12 +434,12 @@ def procesar_audio_con_ia(archivo_audio):
         )
         
         texto_transcrito = transcription.text
-        print(f"Texto detectado por Whisper: {texto_transcrito}")
+        #print(f"Texto detectado por Whisper: {texto_transcrito}")
         
         return analizar_texto_producto(texto_transcrito)
 
     except Exception as e:
-        print(f"Error IA Audio: {str(e)}")
+        #(f"Error IA Audio: {str(e)}")
         return None
 
 ========================================
@@ -1214,7 +1214,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         sender_email = config('RESEND_FROM_EMAIL', default='') 
 
         if not resend_api_key:
-             print(f"MOCK EMAIL TO: {email_destino}")
+             #print(f"MOCK EMAIL TO: {email_destino}")
              return Response({"message": "Correo simulado (Falta API Key)"})
 
         url = "https://api.resend.com/emails"
@@ -2782,6 +2782,206 @@ export const AddProductForm = ({ empresaNit, onSuccess, onCancel }: Props) => {
 };
 
 ========================================
+ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\organisms\BulkUploadModal.tsx
+========================================
+import React, { useState } from 'react';
+import { X, UploadCloud, FileSpreadsheet, CheckCircle, AlertTriangle, Download, Loader2 } from 'lucide-react';
+import { Button } from '../atoms/Button';
+import { generateAndDownloadTemplate } from '../../utils/excelParser';
+import { parseInventoryExcel } from '../../utils/excelParser';
+import { createProducto } from '../../services/productoService';
+import { useToast } from '../../context/ToastContext';
+
+interface BulkUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  empresaNit: string;
+  onSuccess: () => void;
+}
+
+export const BulkUploadModal = ({ isOpen, onClose, empresaNit, onSuccess }: BulkUploadModalProps) => {
+  const { showToast } = useToast();
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<{ row: number; msg: string; type: 'success' | 'error' }[]>([]);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setLogs([]);
+      setProgress(0);
+    }
+  };
+
+  const handleProcess = async () => {
+    if (!file) return;
+    setLoading(true);
+    setLogs([]);
+    
+    try {
+      const rows = await parseInventoryExcel(file, empresaNit);
+      
+      if (rows.length === 0) {
+        showToast("El archivo estÃ¡ vacÃ­o o no tiene datos vÃ¡lidos", "warning");
+        setLoading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < rows.length; i++) {
+        const item = rows[i];
+        
+        setProgress(Math.round(((i + 1) / rows.length) * 100));
+
+        if (item.error || !item.data) {
+           setLogs(prev => [...prev, { row: item.rowNumber, msg: item.error || "Error datos", type: 'error' }]);
+           errorCount++;
+           continue;
+        }
+
+        try {
+          await createProducto(item.data);
+          // setLogs(prev => [...prev, { row: item.rowNumber, msg: `"${item.data?.nombre}" creado`, type: 'success' }]);
+          successCount++;
+        } catch (error: any) {
+          const errMsg = error.response?.data?.codigo ? "CÃ³digo ya existe" : "Error al guardar";
+          setLogs(prev => [...prev, { row: item.rowNumber, msg: `${errMsg} (${item.data?.codigo})`, type: 'error' }]);
+          errorCount++;
+        }
+      }
+
+      showToast(`Proceso finalizado. Exitosos: ${successCount}, Errores: ${errorCount}`, successCount > 0 ? 'success' : 'error');
+      
+      if (successCount > 0) {
+        onSuccess(); 
+      }
+
+    } catch (err) {
+      console.error(err);
+      showToast("Error procesando el archivo Excel", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={!loading ? onClose : undefined} />
+      
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-[fadeIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <FileSpreadsheet className="text-[#E6C200]" /> Carga Masiva Excel
+            </h2>
+            {!loading && (
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                  <X size={24} />
+                </button>
+            )}
+        </div>
+
+        {/* Body */}
+        <div className="space-y-6 overflow-y-auto custom-scrollbar pr-2">
+            
+            {/* Paso 1: Descargar Plantilla */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <p className="text-sm text-blue-800 mb-3 font-medium">1. Descarga la plantilla obligatoria:</p>
+                <Button 
+                    variant="outline" 
+                    onClick={generateAndDownloadTemplate} 
+                    className="w-full bg-white text-blue-700 border-blue-200 hover:bg-blue-50 h-10"
+                    icon={<Download size={16}/>}
+                >
+                    Descargar Plantilla Excel
+                </Button>
+            </div>
+
+            {/* Paso 2: Subir Archivo */}
+            <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${file ? 'border-[#E6C200] bg-yellow-50/30' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input 
+                    type="file" 
+                    accept=".xlsx, .xls" 
+                    onChange={handleFileChange}
+                    disabled={loading}
+                    className="hidden" 
+                    id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                    {file ? (
+                        <>
+                            <FileSpreadsheet size={32} className="text-[#E6C200]"/>
+                            <span className="font-bold text-gray-700 text-sm">{file.name}</span>
+                            <span className="text-xs text-gray-500">Click para cambiar</span>
+                        </>
+                    ) : (
+                        <>
+                            <UploadCloud size={32} className="text-gray-400"/>
+                            <span className="text-sm text-gray-600 font-medium">Click para seleccionar archivo</span>
+                            <span className="text-xs text-gray-400">Formatos: .xlsx</span>
+                        </>
+                    )}
+                </label>
+            </div>
+
+            {/* Progreso y Logs */}
+            {loading && (
+                <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-gray-500 uppercase">
+                        <span>Procesando...</span>
+                        <span>{progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-[#E6C200] h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                    </div>
+                </div>
+            )}
+
+            {/* Resultados / Errores */}
+            {logs.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto text-xs border border-gray-200">
+                    <h4 className="font-bold text-gray-700 mb-2 sticky top-0 bg-gray-50">Reporte:</h4>
+                    {logs.map((log, idx) => (
+                        <div key={idx} className={`flex gap-2 mb-1 ${log.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                            {log.type === 'error' ? <AlertTriangle size={12} className="mt-0.5"/> : <CheckCircle size={12} className="mt-0.5"/>}
+                            <span>Fila {log.row}: {log.msg}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="mt-6 pt-4 border-t border-gray-100 flex gap-3">
+            <Button 
+                onClick={onClose} 
+                className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                disabled={loading}
+            >
+                {loading ? 'Cancelar' : 'Cerrar'}
+            </Button>
+            <Button 
+                onClick={handleProcess} 
+                variant="primary" 
+                className="flex-1"
+                disabled={!file || loading}
+                icon={loading ? <Loader2 size={18} className="animate-spin"/> : <UploadCloud size={18}/>}
+            >
+                {loading ? 'Subiendo...' : 'Procesar Excel'}
+            </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+========================================
 ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\components\organisms\ChatWidget.tsx
 ========================================
 import React, { useState, useRef, useEffect } from 'react';
@@ -2805,7 +3005,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: 1, 
-      text: "Â¡Hola! Soy **LiteBot**. ðŸ¤–\n\nPuedo analizar tu inventario, calcular presupuestos en USD/COP/EUR o buscar productos por cÃ³digo.\n\nÂ¿En quÃ© te ayudo hoy?", 
+      text: "Â¡Hola! Soy **LiteBot**. \n\nPuedo analizar tu inventario, calcular presupuestos en USD/COP/EUR o buscar productos por cÃ³digo.\n\nÂ¿En quÃ© te ayudo hoy?", 
       isBot: true,
       timestamp: new Date()
     }
@@ -2848,7 +3048,7 @@ export const ChatWidget = ({ empresaNit }: ChatWidgetProps) => {
       
       setMessages(prev => [...prev, { id: Date.now() + 1, text: respuesta, isBot: true, timestamp: new Date() }]);
     } catch (error) {
-      setMessages(prev => [...prev, { id: Date.now() + 1, text: "âš ï¸ Error de conexiÃ³n. Intenta de nuevo.", isBot: true, timestamp: new Date() }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, text: "Error de conexiÃ³n. Intenta de nuevo.", isBot: true, timestamp: new Date() }]);
     } finally {
       setLoading(false);
     }
@@ -4052,11 +4252,12 @@ import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { EditProductModal } from '../components/organisms/EditProductModal';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil } from 'lucide-react';
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil, Upload } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
 import { ConfirmModal } from '../components/atoms/ConfirmModal';
 import { ChatWidget } from '../components/organisms/ChatWidget';
+import { BulkUploadModal } from '../components/organisms/BulkUploadModal';
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -4072,6 +4273,9 @@ export default function InventoryPage() {
   // LOGICA MODAL EMAIL
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // LOGICA MODAL CARGA MASIVA (EXCEL)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // LOGICA MODAL ELIMINAR
   const [itemToDelete, setItemToDelete] = useState<{ isOpen: boolean; id: number; nombre: string }>({
@@ -4187,7 +4391,8 @@ export default function InventoryPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8">
       
-      {/* MODALES */}
+      {/* --- MODALES --- */}
+
       <EmailModal 
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
@@ -4209,6 +4414,16 @@ export default function InventoryPage() {
         onClose={() => setIsEditModalOpen(false)}
         product={itemToEdit}
         onUpdate={handleUpdateProduct}
+      />
+
+      {/* MODAL DE CARGA MASIVA */}
+      <BulkUploadModal 
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        empresaNit={nit!}
+        onSuccess={() => {
+            cargarDataCompuesto();
+        }}
       />
 
       <div className="max-w-6xl mx-auto">
@@ -4252,14 +4467,26 @@ export default function InventoryPage() {
             </Button>
             
             {isAdmin && (
-                <Button 
-                  onClick={() => setShowForm(!showForm)} 
-                  variant="primary" 
-                  className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm"
-                  icon={<Plus size={14}/>}
-                >
-                    {showForm ? 'Cerrar' : <><span className="hidden sm:inline">Agregar Producto</span><span className="sm:hidden">Agregar</span></>}
-                </Button>
+                <>
+                    {/* BOTÃ“N EXCEL (Solo Admin) */}
+                    <Button
+                        onClick={() => setIsBulkModalOpen(true)}
+                        className="w-full sm:w-auto px-3 sm:px-4 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                        icon={<Upload size={14} />}
+                    >
+                         <span className="hidden sm:inline">Excel</span>
+                         <span className="sm:hidden">Excel</span>
+                    </Button>
+
+                    <Button 
+                      onClick={() => setShowForm(!showForm)} 
+                      variant="primary" 
+                      className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm"
+                      icon={<Plus size={14}/>}
+                    >
+                        {showForm ? 'Cerrar' : <><span className="hidden sm:inline">Agregar Producto</span><span className="sm:hidden">Agregar</span></>}
+                    </Button>
+                </>
             )}
           </div>
         </header>
@@ -4652,51 +4879,264 @@ export const chatWithInventory = async (nit: string, historial: any): Promise<st
 };
 
 ========================================
-ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\utils\excelGenerator.ts
+ARCHIVO: C:\Users\Nicolás\Desktop\Prueba FE\frontend\src\utils\excelParser.ts
 ========================================
 import ExcelJS from 'exceljs';
+import type { Producto } from '../services/productoService';
+
+const EXAMPLE_DATA = {
+  codigo: 'EJ-001',
+  nombre: 'Zapato Deportivo Lite',
+  caracteristicas: 'Talla 40, Color Negro, ErgonÃ³mico',
+  precio: 150000,
+  moneda: 'COP'
+};
+
+const BRAND_COLORS = {
+  primary: 'FFE6C200', 
+  dark: 'FF0D0D0D',    
+  white: 'FFFFFFFF',
+  gray: 'FFF2F2F2'
+};
+
+interface ParsedRow {
+  data: Producto | null;
+  rowNumber: number;
+  error?: string;
+}
+
+const getImageBuffer = async (url: string): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = url;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 200; 
+      canvas.height = 200; 
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject('No canvas context');
+      
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const x = (canvas.width / 2) - (img.width / 2) * scale;
+      const y = (canvas.height / 2) - (img.height / 2) * scale;
+      
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          blob.arrayBuffer().then(resolve).catch(reject);
+        } else {
+          reject('Blob conversion failed');
+        }
+      }, 'image/png');
+    };
+    img.onerror = (e) => reject(e);
+  });
+};
 
 export const generateAndDownloadTemplate = async () => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Plantilla Carga Masiva');
+  const worksheet = workbook.addWorksheet('Carga Inventario', {
+    views: [{ showGridLines: false }]
+  });
 
   worksheet.columns = [
-    { header: 'CODIGO', key: 'codigo', width: 15 },
-    { header: 'NOMBRE', key: 'nombre', width: 30 },
-    { header: 'CARACTERISTICAS', key: 'caracteristicas', width: 50 },
-    { header: 'PRECIO', key: 'precio', width: 15 },
-    { header: 'MONEDA', key: 'moneda', width: 10 },
+    { key: 'codigo', width: 20 },
+    { key: 'nombre', width: 35 },
+    { key: 'caracteristicas', width: 45 },
+    { key: 'precio', width: 20 },
+    { key: 'moneda', width: 15 },
   ];
 
-  worksheet.getRow(1).font = { bold: true };
+  try {
+    const imageBuffer = await getImageBuffer('/FE.svg');
+    const imageId = workbook.addImage({
+      buffer: imageBuffer,
+      extension: 'png',
+    });
+    worksheet.addImage(imageId, {
+      tl: { col: 0, row: 0 },
+      ext: { width: 60, height: 60 },
+      editAs: 'oneCell'
+    });
+  } catch (e) {
+    console.warn("No se pudo cargar el logo, generando sin imagen.", e);
+  }
 
-  worksheet.addRow({
-    codigo: 'EJ-001',
-    nombre: 'Teclado MecÃ¡nico',
-    caracteristicas: 'Luces RGB, Switch Blue',
-    precio: 45,
-    moneda: 'USD'
-  });
+  worksheet.mergeCells('B2:E2');
+  const titleCell = worksheet.getCell('B2');
+  titleCell.value = 'PLANTILLA DE CARGA MASIVA - LITE THINKING';
+  titleCell.font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: BRAND_COLORS.dark } };
+  titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
 
-  worksheet.addRow({
-    codigo: 'EJ-002',
-    nombre: 'Monitor 24"',
-    caracteristicas: '1080p, 75Hz, HDMI',
-    precio: 450000,
-    moneda: 'COP'
-  });
+  worksheet.addRow([]); 
+  worksheet.addRow([]); 
+  worksheet.addRow([]); 
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const headerRow = worksheet.getRow(5);
+  headerRow.values = ['CÃ“DIGO', 'NOMBRE DEL PRODUCTO', 'CARACTERÃSTICAS', 'PRECIO', 'MONEDA'];
   
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: BRAND_COLORS.dark }
+    };
+    cell.font = {
+      name: 'Segoe UI',
+      bold: true,
+      color: { argb: BRAND_COLORS.primary },
+      size: 11
+    };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: BRAND_COLORS.primary } },
+      bottom: { style: 'medium', color: { argb: BRAND_COLORS.primary } }
+    };
+  });
+  headerRow.height = 30;
+
+  const dataRow = worksheet.getRow(6);
+  dataRow.values = [
+    EXAMPLE_DATA.codigo,
+    EXAMPLE_DATA.nombre,
+    EXAMPLE_DATA.caracteristicas,
+    EXAMPLE_DATA.precio,
+    EXAMPLE_DATA.moneda
+  ];
+
+  dataRow.eachCell((cell, colNumber) => {
+    cell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF555555' } };
+    cell.border = { bottom: { style: 'dotted', color: { argb: 'FFCCCCCC' } } };
+    
+    if (colNumber === 4) cell.numFmt = '#,##0.00';
+  });
+
+  
+  for (let i = 6; i <= 100; i++) {
+    worksheet.getCell(`D${i}`).dataValidation = {
+      type: 'decimal',
+      operator: 'greaterThan',
+      formulae: ['0'],
+      showErrorMessage: true,
+      errorStyle: 'stop',
+      errorTitle: 'Precio InvÃ¡lido',
+      error: 'El precio debe ser un nÃºmero mayor a 0.'
+    };
+
+    worksheet.getCell(`E${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: false,
+      formulae: ['"COP,USD,EUR"'], 
+      showErrorMessage: true,
+      errorStyle: 'stop',
+      errorTitle: 'Moneda InvÃ¡lida',
+      error: 'Seleccione una moneda vÃ¡lida de la lista (COP, USD, EUR).'
+    };
+  }
+
+  const noteCell = worksheet.getCell('B7');
+  noteCell.value = 'Nota: Por favor reemplace el ejemplo o agregue filas nuevas hacia abajo. No modifique los encabezados.';
+  noteCell.font = { size: 9, color: { argb: 'FF888888' }, italic: true };
+
+  
+  const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = window.URL.createObjectURL(blob);
   
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', 'plantilla_inventario_obligatoria.xlsx');
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'Plantilla_Inventario_LiteThinking.xlsx';
+  anchor.click();
+  
   window.URL.revokeObjectURL(url);
+};
+
+export const parseInventoryExcel = async (file: File, empresaNit: string): Promise<ParsedRow[]> => {
+  const buffer = await file.arrayBuffer();
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+
+  let worksheet = workbook.getWorksheet('Carga Inventario');
+  if (!worksheet) worksheet = workbook.getWorksheet(1);
+
+  const results: ParsedRow[] = [];
+
+  if (!worksheet) {
+    throw new Error("El archivo Excel no tiene hojas vÃ¡lidas o formato incorrecto.");
+  }
+
+
+  worksheet.eachRow((row, rowNumber) => {
+
+    const cellA = row.getCell(1).text?.toString().trim();
+    
+    if (!cellA || cellA.toUpperCase() === 'CÃ“DIGO' || cellA.toUpperCase() === 'CODIGO') return;
+
+    const codigo = cellA;
+    const nombre = row.getCell(2).text?.toString().trim();
+    const caracteristicas = row.getCell(3).text?.toString().trim() || "Sin descripciÃ³n";
+    const precioRaw = row.getCell(4).value;
+    const moneda = row.getCell(5).text?.toString().trim().toUpperCase() || 'COP';
+
+    const isExampleRow = 
+        codigo === EXAMPLE_DATA.codigo &&
+        nombre === EXAMPLE_DATA.nombre &&
+        Number(precioRaw) === EXAMPLE_DATA.precio;
+
+    if (isExampleRow) {
+        //console.log(`Fila ${rowNumber} ignorada: Es el ejemplo de la plantilla.`);
+        return; 
+    }
+
+    if (!codigo || !nombre || !precioRaw) {
+      results.push({
+        data: null,
+        rowNumber,
+        error: "Faltan datos obligatorios (CÃ³digo, Nombre o Precio)"
+      });
+      return;
+    }
+
+    let precio = 0;
+    if (typeof precioRaw === 'object' && precioRaw !== null && 'result' in precioRaw) {
+         precio = Number((precioRaw as any).result);
+    } else {
+         precio = Number(precioRaw);
+    }
+
+    if (isNaN(precio) || precio <= 0) {
+        results.push({
+            data: null,
+            rowNumber,
+            error: "El precio debe ser un nÃºmero mayor a 0"
+        });
+        return;
+    }
+
+    if (!['COP', 'USD', 'EUR'].includes(moneda)) {
+        results.push({
+            data: null,
+            rowNumber,
+            error: `Moneda '${moneda}' no vÃ¡lida. Use COP, USD o EUR.`
+        });
+        return;
+    }
+
+    const producto: Producto = {
+      codigo,
+      nombre,
+      caracteristicas,
+      empresa: empresaNit,
+      precios: {
+        [moneda]: precio
+      }
+    };
+
+    results.push({ data: producto, rowNumber });
+  });
+
+  return results;
 };
 
