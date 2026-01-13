@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, Sparkles, Trash2, ChevronDown } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, Trash2, ChevronDown } from 'lucide-react';
 import { chatWithInventory } from '../../services/productoService';
 import ReactMarkdown from 'react-markdown';
 
