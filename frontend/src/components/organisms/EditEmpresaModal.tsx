@@ -3,6 +3,8 @@ import { X, Save, Building2 } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { type Empresa } from '../../services/empresaService';
+import { useToast } from '../../context/ToastContext'; // Importar
+import { getErrorMessage } from '../../utils/apiErrors'; // Importar
 
 interface EditEmpresaModalProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ interface EditEmpresaModalProps {
 }
 
 export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmpresaModalProps) => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState<Partial<Empresa>>({});
   const [loading, setLoading] = useState(false);
 
@@ -38,9 +41,12 @@ export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmp
         direccion: formData.direccion,
         telefono: formData.telefono,
       });
+      // El toast de éxito lo suele manejar el padre, pero por si acaso:
+      // showToast("Empresa actualizada correctamente", "success");
       onClose();
     } catch (error) {
-      console.error("Error al actualizar empresa:", error);
+      const msg = getErrorMessage(error);
+      showToast(msg, "error", "Error al actualizar");
     } finally {
       setLoading(false);
     }
@@ -60,44 +66,40 @@ export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmp
             </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
             
             {/* NIT Disabled */}
-            <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">NIT (No editable)</label>
-                <Input
-                    value={formData.nit || ''}
-                    disabled
-                    className="bg-gray-100 text-gray-500 cursor-not-allowed border-dashed"
-                />
-            </div>
+            <Input
+                label="NIT (No editable)"
+                helpText="Por seguridad e integridad de la información, el NIT no se puede modificar una vez creado."
+                value={formData.nit || ''}
+                disabled
+                className="bg-gray-100 text-gray-500 cursor-not-allowed border-dashed"
+            />
 
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nombre</label>
-                <Input
-                    value={formData.nombre || ''}
-                    onChange={e => setFormData({...formData, nombre: e.target.value})}
-                    required
-                />
-            </div>
+            <Input
+                label="Razón Social"
+                helpText="Actualice el nombre legal si hubo cambios en Cámara de Comercio."
+                value={formData.nombre || ''}
+                onChange={e => setFormData({...formData, nombre: e.target.value})}
+                required
+            />
 
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Dirección</label>
-                <Input
-                    value={formData.direccion || ''}
-                    onChange={e => setFormData({...formData, direccion: e.target.value})}
-                    required
-                />
-            </div>
+            <Input
+                label="Dirección"
+                helpText="Nueva ubicación física para correspondencia."
+                value={formData.direccion || ''}
+                onChange={e => setFormData({...formData, direccion: e.target.value})}
+                required
+            />
 
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Teléfono</label>
-                <Input
-                    value={formData.telefono || ''}
-                    onChange={e => setFormData({...formData, telefono: e.target.value})}
-                    required
-                />
-            </div>
+            <Input
+                label="Teléfono"
+                helpText="Solo números. Mínimo 7 dígitos."
+                value={formData.telefono || ''}
+                onChange={e => setFormData({...formData, telefono: e.target.value})}
+                required
+            />
 
             <div className="flex gap-3 pt-4 border-t border-gray-100 mt-6">
                 <Button type="button" onClick={onClose} className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200">
