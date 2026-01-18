@@ -26,7 +26,7 @@ class CrearEmpresaUseCase:
         except (EntityValidationError, BusinessRuleError) as e:
             raise e
         except Exception as e:
-            # AQUÍ ESTÁ EL TRY/CATCH GENERAL
+            #TRY/CATCH GENERAL
             raise InfrastructureError(f"Error crítico guardando empresa: {str(e)}")
 
 class ListarEmpresasUseCase:

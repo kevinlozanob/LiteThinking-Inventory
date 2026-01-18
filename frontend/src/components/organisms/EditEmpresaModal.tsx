@@ -3,8 +3,8 @@ import { X, Save, Building2 } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { type Empresa } from '../../services/empresaService';
-import { useToast } from '../../context/ToastContext'; // Importar
-import { getErrorMessage } from '../../utils/apiErrors'; // Importar
+import { useToast } from '../../context/ToastContext';
+import { getErrorMessage } from '../../utils/apiErrors';
 
 interface EditEmpresaModalProps {
   isOpen: boolean;
@@ -41,8 +41,7 @@ export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmp
         direccion: formData.direccion,
         telefono: formData.telefono,
       });
-      // El toast de éxito lo suele manejar el padre, pero por si acaso:
-      // showToast("Empresa actualizada correctamente", "success");
+      showToast("Empresa actualizada correctamente", "success");
       onClose();
     } catch (error) {
       const msg = getErrorMessage(error);

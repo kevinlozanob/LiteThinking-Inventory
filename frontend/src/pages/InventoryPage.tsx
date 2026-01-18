@@ -143,7 +143,6 @@ export default function InventoryPage() {
   };
 
   return (
-    // CAMBIO AQUI: Agregué 'pb-32' al final para dar espacio al Widget del Chat
     <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8 pb-32">
       
       {/* --- MODALES --- */}

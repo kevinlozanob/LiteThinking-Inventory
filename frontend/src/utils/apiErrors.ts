@@ -18,9 +18,7 @@ export const getErrorMessage = (error: unknown): string => {
   if (status === 401) return "Su sesión ha expirado. Por favor inicie sesión nuevamente.";
   if (status === 403) return "No tiene permisos suficientes para realizar esta acción.";
 
-  // 2. Errores de Validación de Django (400 Bad Request)
   if (data) {
-    // Caso: Error genérico de DRF (ej: excepciones manuales)
     if (data.detail) {
       return data.detail;
     }

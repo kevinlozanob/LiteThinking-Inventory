@@ -15,7 +15,7 @@ interface Message {
   timestamp: Date;
 }
 
-export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { // Agregué onOpenChange aquí
+export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -30,7 +30,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { /
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Mantenemos tu función toggleChat si la usas, o usamos setIsOpen directo
   const toggleChat = () => {
       const newState = !isOpen;
       setIsOpen(newState);
@@ -63,7 +62,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { /
     setLoading(true);
 
     try {
-      // Nota: Aquí asumo que chatWithInventory maneja el historial como lista de objetos
       const historialParaEnviar = newHistory.slice(-15).map(m => ({
         role: m.isBot ? 'assistant' : 'user',
         content: m.text
@@ -93,8 +91,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { /
   };
 
   return (
-    // CAMBIO CLAVE 1: 'pointer-events-none' en el contenedor padre.
-    // Esto hace que los clicks pasen a través del área vacía hacia la tabla de abajo.
     <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[9999] flex flex-col items-end font-sans pointer-events-none">
       
       {/* --- VENTANA DEL CHAT --- */}
@@ -224,8 +220,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { /
         </div>
       </div>
 
-      {/* --- BOTÓN FLOTANTE (FAB) --- */}
-      {/* CAMBIO CLAVE 3: 'pointer-events-auto' para poder hacer click en el botón */}
       <button 
         onClick={toggleChat}
         className={`
@@ -245,7 +239,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => { /
       </button>
 
         {/* Botón de cierre externo */}
-        {/* CAMBIO CLAVE 4: 'pointer-events-auto' */}
        <button 
         onClick={toggleChat}
         className={`
