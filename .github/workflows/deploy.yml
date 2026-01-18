@@ -1,6 +1,5 @@
 name: Deploy Production
 
-# Esto le dice: "Ejecútese cada vez que yo haga un push a la rama main"
 on:
   push:
     branches: [ "main" ]
@@ -11,17 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Descargar su código en los servidores de GitHub
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Configurar Node.js para compilar el Frontend
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
 
-    # 3. Compilar el Frontend (Aquí GitHub pone la RAM, no su VPS)
     - name: Install & Build Frontend
       run: |
         cd frontend
@@ -30,7 +26,6 @@ jobs:
         export VITE_API_URL=/api  
         npm run build
 
-    # 4. Subir la carpeta 'dist' a la VPS (Usando sus Secretos)
     - name: Copy files to VPS
       uses: appleboy/scp-action@master
       with:
@@ -39,9 +34,8 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "frontend/dist/*"
         target: "/home/${{ secrets.VPS_USER }}/deploy-temp"
-        strip_components: 2 # Esto evita que se cree la carpeta 'frontend/dist' allá
+        strip_components: 2 
 
-    # 5. Entrar por SSH y acomodar todo
     - name: Deploy on VPS
       uses: appleboy/ssh-action@master
       with:
