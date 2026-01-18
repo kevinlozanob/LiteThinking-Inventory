@@ -14,7 +14,7 @@ class CrearEmpresaUseCase:
             try:
                 empresa = Empresa(nit=nit, nombre=nombre, direccion=direccion, telefono=telefono)
             except ValueError as e:
-                # Transformamos error de valor en error de Dominio
+                # Try Catch para datos inválidos, en Python Try Except
                 raise EntityValidationError(f"Datos inválidos: {str(e)}")
 
             # 2. Validar Reglas de Negocio (¿Ya existe?)
@@ -26,8 +26,7 @@ class CrearEmpresaUseCase:
         except (EntityValidationError, BusinessRuleError) as e:
             raise e
         except Exception as e:
-            # Error desconocido? Lo atrapamos y lo reportamos como infraestructura.
-            # AQUÍ ESTÁ EL TRY/CATCH QUE QUERÍA EL CEO.
+            # AQUÍ ESTÁ EL TRY/CATCH GENERAL
             raise InfrastructureError(f"Error crítico guardando empresa: {str(e)}")
 
 class ListarEmpresasUseCase:
