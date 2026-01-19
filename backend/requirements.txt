@@ -9,3 +9,5 @@ groq
 requests
 psycopg2-binary
 gunicorn
+pytest
+pytest-django
