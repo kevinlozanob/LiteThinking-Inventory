@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from django.http import FileResponse
 from django.db import connection
 
-# --- IMPORTS DE DOMINIO Y ADAPTADORES ---
 from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer, SystemStatusSerializer
 from .reports import generar_pdf_inventario   
