@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional 
 from decimal import Decimal
 
 @dataclass
@@ -10,6 +10,7 @@ class Producto:
     empresa_nit: str
 
     precios: Dict[str, Decimal]
+    id: Optional[int] = None 
 
     def __post_init__(self):
         if not self.codigo:

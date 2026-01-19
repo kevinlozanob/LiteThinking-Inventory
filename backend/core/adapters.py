@@ -4,7 +4,9 @@ from core_domain.entities.producto import Producto as ProductoEntity
 from core_domain.ports.repositories import EmpresaRepository, ProductoRepository
 from .models import EmpresaModel, ProductoModel
 
-# --- ADAPTADOR EMPRESA ---
+# =========================================================
+# ADAPTADOR EMPRESA (Repositorio)
+# =========================================================
 class DjangoEmpresaRepository(EmpresaRepository):
     def save(self, empresa: EmpresaEntity) -> EmpresaEntity:
         obj, created = EmpresaModel.objects.update_or_create(
@@ -39,12 +41,12 @@ class DjangoEmpresaRepository(EmpresaRepository):
             telefono=model.telefono
         )
 
-# --- ADAPTADOR PRODUCTO ---
+# =========================================================
+# ADAPTADOR PRODUCTO (Repositorio)
+# =========================================================
 class DjangoProductoRepository(ProductoRepository):
     def save(self, producto: ProductoEntity) -> ProductoEntity:
-        try:
-            empresa_model = EmpresaModel.objects.get(nit=producto.empresa_nit)
-        except EmpresaModel.DoesNotExist:
+        if not EmpresaModel.objects.filter(nit=producto.empresa_nit).exists():
             raise ValueError(f"Empresa {producto.empresa_nit} no encontrada.")
 
         obj, created = ProductoModel.objects.update_or_create(
@@ -52,7 +54,7 @@ class DjangoProductoRepository(ProductoRepository):
             defaults={
                 'nombre': producto.nombre,
                 'caracteristicas': producto.caracteristicas,
-                'empresa': empresa_model,
+                'empresa_id': producto.empresa_nit,
                 'precios': producto.precios
             }
         )
@@ -80,12 +82,11 @@ class DjangoProductoRepository(ProductoRepository):
         ProductoModel.objects.filter(id=id_producto).delete()
 
     def _to_entity(self, model: ProductoModel) -> ProductoEntity:
-        entity = ProductoEntity(
+        return ProductoEntity(
+            id=model.id, 
             codigo=model.codigo,
             nombre=model.nombre,
             caracteristicas=model.caracteristicas,
             empresa_nit=model.empresa_id,
             precios=model.precios
         )
-        entity.id = model.id 
-        return entity

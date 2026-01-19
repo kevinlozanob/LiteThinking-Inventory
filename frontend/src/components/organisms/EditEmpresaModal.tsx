@@ -41,11 +41,11 @@ export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmp
         direccion: formData.direccion,
         telefono: formData.telefono,
       });
-      showToast("Empresa actualizada correctamente", "success");
+      //showToast("Empresa actualizada correctamente", "success");
       onClose();
     } catch (error) {
       const msg = getErrorMessage(error);
-      showToast(msg, "error", "Error al actualizar");
+      //showToast(msg, "error", "Error al actualizar");
     } finally {
       setLoading(false);
     }
