@@ -3,7 +3,6 @@ import { X, Save, Building2 } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { type Empresa } from '../../services/empresaService';
-import { getErrorMessage } from '../../utils/apiErrors';
 
 interface EditEmpresaModalProps {
   isOpen: boolean;
