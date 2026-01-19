@@ -3,7 +3,6 @@ import { X, Save, Building2 } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { type Empresa } from '../../services/empresaService';
-import { useToast } from '../../context/ToastContext';
 import { getErrorMessage } from '../../utils/apiErrors';
 
 interface EditEmpresaModalProps {
@@ -14,7 +13,6 @@ interface EditEmpresaModalProps {
 }
 
 export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmpresaModalProps) => {
-  const { showToast } = useToast();
   const [formData, setFormData] = useState<Partial<Empresa>>({});
   const [loading, setLoading] = useState(false);
 
@@ -41,11 +39,12 @@ export const EditEmpresaModal = ({ isOpen, onClose, empresa, onUpdate }: EditEmp
         direccion: formData.direccion,
         telefono: formData.telefono,
       });
-      //showToast("Empresa actualizada correctamente", "success");
+      // El toast de éxito lo maneja el padre (EmpresaList)
       onClose();
     } catch (error) {
-      const msg = getErrorMessage(error);
-      //showToast(msg, "error", "Error al actualizar");
+      // El toast de error lo maneja el padre (EmpresaList)
+      // Solo logueamos en consola por depuración
+      console.error("Error en modal:", error);
     } finally {
       setLoading(false);
     }
