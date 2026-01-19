@@ -270,7 +270,7 @@ class ProductoViewSet(viewsets.GenericViewSet):
             repo = get_producto_repository()
             use_case = ListarProductosPorEmpresaUseCase(repo)
             productos = use_case.execute(nit)
-            datos = [{"n": p.nombre, "p": p.precios} for p in productos]
+            datos = [{"n": p.nombre, "p": p.precios, "cod": p.codigo, "c": p.caracteristicas} for p in productos]
             rta = chat_con_inventario(historial, datos)
             return Response({"respuesta": rta})
         except: return Response({"error": "IA Off"}, status=503)
