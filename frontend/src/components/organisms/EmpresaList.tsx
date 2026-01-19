@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getEmpresas, deleteEmpresa, updateEmpresa, type Empresa } from '../../services/empresaService';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ChevronRight, Building2, Trash2, Pencil, MapPin, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -21,8 +21,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
   const [deleting, setDeleting] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
-  
-  const navigate = useNavigate();
+    
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
 
@@ -44,6 +43,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
 
   const openEditModal = (e: React.MouseEvent, empresa: Empresa) => {
     e.stopPropagation();
+    e.preventDefault(); 
     setEmpresaToEdit(empresa);
     setEditModalOpen(true);
   };
@@ -63,6 +63,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
 
   const openDeleteModal = (e: React.MouseEvent, nit: string, nombre: string) => {
     e.stopPropagation();
+    e.preventDefault();
     setDeleteModal({ isOpen: true, nit, nombre });
   };
 
@@ -120,11 +121,10 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
               {empresas.map((empresa) => (
                 <tr 
                     key={empresa.nit} 
-                    className="group hover:bg-[#FFFDF0] transition-colors duration-200 cursor-pointer"
-                    onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
+                    className="group hover:bg-[#FFFDF0] transition-colors duration-200"
                 >
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                    <Link to={`/dashboard/empresa/${empresa.nit}`} className="flex items-center gap-3 hover:opacity-80 block w-full">
                         <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-[#E6C200] group-hover:text-black transition-colors">
                             <Building2 size={18}/>
                         </div>
@@ -132,7 +132,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                             <div className="text-sm font-bold text-gray-900">{empresa.nombre}</div>
                             <div className="text-xs text-gray-400 font-mono">{empresa.nit}</div>
                         </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-600 flex flex-col gap-1">
@@ -146,23 +146,29 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                         <>
                             <button 
                                 onClick={(e) => openEditModal(e, empresa)} 
-                                className="p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                className="p-4 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
                                 title="Editar"
+                                aria-label={`Editar empresa ${empresa.nombre}`}
                             >
                                 <Pencil size={18}/>
                             </button>
                             <button 
                                 onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} 
-                                className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                                className="p-4 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                                 title="Eliminar"
+                                aria-label={`Eliminar empresa ${empresa.nombre}`}
                             >
                                 <Trash2 size={18}/>
                             </button>
                         </>
                       )}
-                      <button className="p-2 text-[#E6C200] hover:bg-yellow-50 rounded-full">
+                      <Link 
+                        to={`/dashboard/empresa/${empresa.nit}`}
+                        className="p-4 text-[#E6C200] hover:bg-yellow-50 rounded-full inline-block"
+                        aria-label={`Ver inventario de ${empresa.nombre}`}
+                      >
                          <ChevronRight size={20}/>
-                      </button>
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -171,13 +177,13 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
           </table>
         </div>
 
-        {/* --- MOBILE CARDS (VISTA CELULAR) --- */}
+        {/* --- MOBILE CARDS --- */}
         <div className="sm:hidden flex flex-col gap-3 p-3 bg-gray-50">
           {empresas.map((empresa) => (
-            <div 
+            <Link 
               key={empresa.nit} 
-              onClick={() => navigate(`/dashboard/empresa/${empresa.nit}`)}
-              className="bg-white p-4 rounded-xl shadow-sm border border-transparent hover:border-[#E6C200] transition-all duration-300 active:scale-[0.98]"
+              to={`/dashboard/empresa/${empresa.nit}`}
+              className="bg-white p-4 rounded-xl shadow-sm border border-transparent hover:border-[#E6C200] transition-all duration-300 active:scale-[0.98] block"
             >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
@@ -189,20 +195,22 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                     <p className="text-xs text-gray-500 font-mono">{empresa.nit}</p>
                   </div>
                 </div>
-                {/* BOTONES MÓVILES VISIBLES */}
+                
                 {isAdmin && (
                     <div className="flex gap-1">
                         <button 
                             onClick={(e) => openEditModal(e, empresa)} 
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                            className="p-4 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                            aria-label={`Editar ${empresa.nombre}`}
                         >
-                            <Pencil size={18}/>
+                            <Pencil size={20}/>
                         </button>
                         <button 
                             onClick={(e) => openDeleteModal(e, empresa.nit, empresa.nombre)} 
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                            className="p-4 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                            aria-label={`Eliminar ${empresa.nombre}`}
                         >
-                            <Trash2 size={18}/>
+                            <Trash2 size={20}/>
                         </button>
                     </div>
                 )}
@@ -219,7 +227,7 @@ export const EmpresaList = ({ refreshTrigger }: EmpresaListProps) => {
                     <ChevronRight size={16} className="text-gray-400"/>
                   </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 

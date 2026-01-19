@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductos, deleteProducto, downloadPDF, sendEmailReport, updateProducto, type Producto } from '../services/productoService';
 import { getEmpresaByNit, type Empresa } from '../services/empresaService'; 
@@ -6,12 +6,16 @@ import { Button } from '../components/atoms/Button';
 import { AddProductForm } from '../components/organisms/AddProductForm';
 import { EditProductModal } from '../components/organisms/EditProductModal';
 import { useAuth } from '../context/AuthContext';
-import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil, Upload } from 'lucide-react';
+import { FileText, ArrowLeft, Mail, Send, Plus, Package, Trash2, Pencil, Upload, Loader2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { EmailModal } from '../components/atoms/EmailModal';
 import { ConfirmModal } from '../components/atoms/ConfirmModal';
 import { ChatWidget } from '../components/organisms/ChatWidget';
-import { BulkUploadModal } from '../components/organisms/BulkUploadModal';
+import { SEO } from '../components/atoms/SEO';
+
+const BulkUploadModal = lazy(() => 
+  import('../components/organisms/BulkUploadModal').then(module => ({ default: module.BulkUploadModal }))
+);
 
 export default function InventoryPage() {
   const { nit } = useParams();
@@ -24,20 +28,15 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
-  // LOGICA MODAL EMAIL
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-
-  // LOGICA MODAL CARGA MASIVA (EXCEL)
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
-  // LOGICA MODAL ELIMINAR
   const [itemToDelete, setItemToDelete] = useState<{ isOpen: boolean; id: number; nombre: string }>({
     isOpen: false, id: 0, nombre: ''
   });
   const [deletingProduct, setDeletingProduct] = useState(false);
 
-  // LOGICA MODAL EDITAR
   const [itemToEdit, setItemToEdit] = useState<Producto | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -65,25 +64,14 @@ export default function InventoryPage() {
     }
   };
   
-  // --- HANDLERS ---
-
   const handleSendEmailSubmit = async (email: string) => {
     setSendingEmail(true);
     try {
         await sendEmailReport(email, nit);
-        showToast(
-            `El PDF ha sido enviado a ${email}. Revisa Spam si no llega.`, 
-            'success', 
-            "¡Correo Enviado!"
-        ); 
+        showToast(`El PDF ha sido enviado a ${email}.`, 'success', "¡Correo Enviado!"); 
         setIsEmailModalOpen(false);
     } catch (error) {
-        console.error(error);
-        showToast(
-            "El servicio de correo falló. Intenta más tarde.", 
-            'error',
-            "Error de Envío"
-        );
+        showToast("El servicio de correo falló.", 'error', "Error de Envío");
     } finally {
         setSendingEmail(false);
     }
@@ -101,21 +89,12 @@ export default function InventoryPage() {
   const confirmDeleteProduct = async () => {
     setDeletingProduct(true);
     try {
-      await deleteProducto(itemToDelete.id);
+      await deleteProducto(itemToDelete.id!); 
       setProductos(prev => prev.filter(p => p.id !== itemToDelete.id));
-      showToast(
-        "El producto se eliminó permanentemente.", 
-        "info", 
-        "Eliminado"
-      );
+      showToast("El producto se eliminó.", "info", "Eliminado");
       setItemToDelete({ isOpen: false, id: 0, nombre: '' });
     } catch (error) {
-      console.error(error);
-      showToast(
-        "No se pudo eliminar el item. ¿Tienes internet?", 
-        "error",
-        "Error al Eliminar"
-      );
+      showToast("No se pudo eliminar el item.", "error");
     } finally {
       setDeletingProduct(false);
     }
@@ -124,16 +103,12 @@ export default function InventoryPage() {
   const handleUpdateProduct = async (id: number, data: Partial<Producto>) => {
     try {
         const updatedProduct = await updateProducto(id, data);
-        
         setProductos(prev => prev.map(p => (p.id === id ? updatedProduct : p)));
-        
         showToast("Producto actualizado correctamente", "success");
         setIsEditModalOpen(false);
         setItemToEdit(null);
     } catch (error) {
-        console.error("Error update:", error);
         showToast("No se pudo actualizar el producto", "error");
-        throw error;
     }
   };
 
@@ -142,10 +117,14 @@ export default function InventoryPage() {
       setIsEditModalOpen(true);
   };
 
+  const pageTitle = empresaInfo ? `Inventario: ${empresaInfo.nombre}` : 'Cargando Inventario...';
+
   return (
-    <div className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8 pb-32">
-      
-      {/* --- MODALES --- */}
+    <main className="min-h-screen bg-gray-100 p-3 sm:p-4 md:p-8 pb-32">
+      <SEO 
+        title={pageTitle}
+        description={`Gestión de inventario detallada para la empresa ${empresaInfo?.nombre || ''}.`}
+      />
 
       <EmailModal 
         isOpen={isEmailModalOpen}
@@ -157,7 +136,7 @@ export default function InventoryPage() {
       <ConfirmModal
         isOpen={itemToDelete.isOpen}
         title="Eliminar Producto"
-        message={`¿Estás seguro de eliminar "${itemToDelete.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Estás seguro de eliminar "${itemToDelete.nombre}"?`}
         onConfirm={confirmDeleteProduct}
         onCancel={() => setItemToDelete({ isOpen: false, id: 0, nombre: '' })}
         loading={deletingProduct}
@@ -170,32 +149,40 @@ export default function InventoryPage() {
         onUpdate={handleUpdateProduct}
       />
 
-      {/* MODAL DE CARGA MASIVA */}
-      <BulkUploadModal 
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-        empresaNit={nit!}
-        onSuccess={() => {
-            cargarDataCompuesto();
-        }}
-      />
+      {isBulkModalOpen && (
+        <Suspense fallback={
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                 <div className="bg-white p-4 rounded-full shadow-xl">
+                    <Loader2 className="w-8 h-8 text-[#E6C200] animate-spin" />
+                 </div>
+            </div>
+        }>
+          <BulkUploadModal 
+            isOpen={isBulkModalOpen}
+            onClose={() => setIsBulkModalOpen(false)}
+            empresaNit={nit!}
+            onSuccess={() => { cargarDataCompuesto(); }}
+          />
+        </Suspense>
+      )}
 
       <div className="max-w-6xl mx-auto">
         <Button 
             onClick={() => navigate('/dashboard')} 
             variant="outline"
-            className="w-full sm:w-auto px-4 mb-4 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200"
+            className="w-full sm:w-auto px-4 mb-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 h-[48px]"
             icon={<ArrowLeft size={16}/>}
+            aria-label="Volver al panel de empresas"
         >
             Volver a Empresas
         </Button>
 
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 bg-white p-4 sm:p-6 rounded-lg shadow-sm animate-[fadeIn_0.5s_ease-out]">
           <div className="w-full lg:w-auto">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 break-words">
                {empresaInfo ? `Inventario: ${empresaInfo.nombre}` : 'Cargando empresa...'}
             </h1>
-            <p className="text-gray-500 text-xs sm:text-sm">
+            <p className="text-gray-700 text-xs sm:text-sm font-medium"> 
                 NIT: {nit} {empresaInfo && `• Tel: ${empresaInfo.telefono}`}
             </p>
           </div>
@@ -204,8 +191,9 @@ export default function InventoryPage() {
             <Button 
               variant="danger"
               onClick={handleDownloadPDF} 
-              className="w-full sm:w-auto px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm" 
+              className="w-full sm:w-auto px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm h-[48px]" 
               icon={<FileText size={14} className="sm:w-4 sm:h-4"/>}
+              aria-label="Descargar reporte en PDF"
             >
                 <span className="hidden xs:inline">PDF</span>
                 <span className="xs:hidden">PDF</span>
@@ -213,20 +201,21 @@ export default function InventoryPage() {
 
             <Button 
                 onClick={() => setIsEmailModalOpen(true)} 
-                className="w-full sm:w-auto px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" 
+                className="w-full sm:w-auto px-3 sm:px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm h-[48px]" 
                 disabled={sendingEmail}
                 icon={sendingEmail ? <Send size={14} className="animate-pulse"/> : <Mail size={14}/>}
+                aria-label="Enviar reporte por correo"
             >
                 {sendingEmail ? 'Enviando...' : <><span className="hidden sm:inline">Enviar</span><span className="sm:hidden">Email</span></>}
             </Button>
             
             {isAdmin && (
                 <>
-                    {/* BOTÓN EXCEL (Solo Admin) */}
                     <Button
                         onClick={() => setIsBulkModalOpen(true)}
-                        className="w-full sm:w-auto px-3 sm:px-4 bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                        className="w-full sm:w-auto px-3 sm:px-4 bg-green-700 hover:bg-green-800 text-white text-xs sm:text-sm h-[48px]"
                         icon={<Upload size={14} />}
+                        aria-label="Cargar inventario desde Excel"
                     >
                          <span className="hidden sm:inline">Excel</span>
                          <span className="sm:hidden">Excel</span>
@@ -235,8 +224,9 @@ export default function InventoryPage() {
                     <Button 
                       onClick={() => setShowForm(!showForm)} 
                       variant="primary" 
-                      className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm"
+                      className="w-full sm:w-auto px-3 sm:px-4 col-span-2 sm:col-span-1 text-xs sm:text-sm h-[48px]"
                       icon={<Plus size={14}/>}
+                      aria-label={showForm ? "Cerrar formulario" : "Agregar nuevo producto"}
                     >
                         {showForm ? 'Cerrar' : <><span className="hidden sm:inline">Agregar Producto</span><span className="sm:hidden">Agregar</span></>}
                     </Button>
@@ -248,10 +238,7 @@ export default function InventoryPage() {
         {showForm && (
             <AddProductForm 
                 empresaNit={nit!} 
-                onSuccess={() => {
-                    cargarDataCompuesto();
-                    setShowForm(false);
-                }} 
+                onSuccess={() => { cargarDataCompuesto(); setShowForm(false); }} 
                 onCancel={() => setShowForm(false)} 
             />
         )}
@@ -261,30 +248,28 @@ export default function InventoryPage() {
               <div className="p-8 sm:p-12 text-center text-gray-500">Cargando datos...</div>
             ) : (
               <>
-                {/* Vista Desktop - Tabla */}
+                {/* Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                           <tr>
-                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Código</th>
-                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Producto</th>
-                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Características</th>
-                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Precio</th>
-                              {isAdmin && <th className="px-4 lg:px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Acción</th>}
+                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-800 uppercase">Código</th>
+                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-800 uppercase">Producto</th>
+                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-800 uppercase">Características</th>
+                              <th className="px-4 lg:px-6 py-3 text-left text-xs font-bold text-gray-800 uppercase">Precio</th>
+                              {isAdmin && <th className="px-4 lg:px-6 py-3 text-right text-xs font-bold text-gray-800 uppercase">Acción</th>}
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                           {productos.map(prod => (
                               <tr key={prod.id} className="hover:bg-gray-50 transition-colors">
                                   <td className="px-4 lg:px-6 py-4 text-sm font-medium text-gray-900">{prod.codigo}</td>
-                                  <td className="px-4 lg:px-6 py-4 text-sm text-gray-600">{prod.nombre}</td>
-                                  <td className="px-4 lg:px-6 py-4 text-xs text-gray-500 max-w-xs truncate">{prod.caracteristicas}</td>
+                                  <td className="px-4 lg:px-6 py-4 text-sm text-gray-900">{prod.nombre}</td>
+                                  <td className="px-4 lg:px-6 py-4 text-xs text-gray-700 max-w-xs truncate">{prod.caracteristicas}</td>
                                   
-                                  {/* PRECIO ÚNICO (DESKTOP) */}
-                                  <td className="px-4 lg:px-6 py-4 text-sm font-bold text-green-600">
+                                  <td className="px-4 lg:px-6 py-4 text-sm font-bold text-green-700">
                                       {(() => {
                                           const precios = prod.precios || {};
-                                          // Prioridad: COP -> Primer precio -> $0
                                           if (precios['COP']) {
                                               return <div className="whitespace-nowrap">COP ${precios['COP'].toLocaleString()}</div>;
                                           }
@@ -299,18 +284,19 @@ export default function InventoryPage() {
 
                                   {isAdmin && (
                                     <td className="px-4 lg:px-6 py-4 text-right whitespace-nowrap">
-                                        {/* BOTONES MEJORADOS (Desktop) - Más padding y hover */}
                                        <button 
                                          onClick={() => openEditModal(prod)}
-                                         className="text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-all p-2 rounded-full mr-2"
+                                         className="text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-all p-3 rounded-full mr-2"
                                          title="Editar producto"
+                                         aria-label={`Editar producto ${prod.nombre}`}
                                        >
                                          <Pencil size={20}/>
                                        </button>
                                        <button 
                                          onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
-                                         className="text-gray-400 hover:text-red-700 hover:bg-red-50 transition-all p-2 rounded-full"
+                                         className="text-gray-600 hover:text-red-700 hover:bg-red-50 transition-all p-3 rounded-full"
                                          title="Eliminar producto"
+                                         aria-label={`Eliminar producto ${prod.nombre}`}
                                        >
                                          <Trash2 size={20}/>
                                        </button>
@@ -322,27 +308,28 @@ export default function InventoryPage() {
                   </table>
                 </div>
 
-                {/* Vista Mobile - Cards */}
+                {/* Mobile Cards */}
                 <div className="md:hidden divide-y divide-gray-200">
                   {productos.map(prod => (
                     <div key={prod.id} className="p-4 hover:bg-gray-50 transition-colors">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-bold text-gray-900">{prod.nombre}</p>
-                          <p className="text-xs text-gray-500">Código: {prod.codigo}</p>
+                          <h2 className="font-bold text-gray-900 text-base">{prod.nombre}</h2>
+                          <p className="text-xs text-gray-700 font-mono mt-0.5">Código: {prod.codigo}</p>
                         </div>
                         {isAdmin && (
                             <div className="flex -mt-2 -mr-2 gap-1">
-                                {/* BOTONES MEJORADOS (Mobile) - Más padding y hover */}
                                 <button 
                                     onClick={() => openEditModal(prod)}
-                                    className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-all"
+                                    className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-4 rounded-full transition-all"
+                                    aria-label={`Editar ${prod.nombre}`}
                                 >
                                     <Pencil size={20}/>
                                 </button>
                                 <button 
                                     onClick={() => setItemToDelete({ isOpen: true, id: prod.id!, nombre: prod.nombre })}
-                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all"
+                                    className="text-gray-600 hover:text-red-600 hover:bg-red-50 p-4 rounded-full transition-all"
+                                    aria-label={`Eliminar ${prod.nombre}`}
                                 >
                                     <Trash2 size={20}/>
                                 </button>
@@ -350,18 +337,17 @@ export default function InventoryPage() {
                         )}
                       </div>
                       <div className="flex justify-between items-end mt-2">
-                          <p className="text-xs text-gray-500 line-clamp-2 w-2/3">{prod.caracteristicas}</p>
+                          <p className="text-xs text-gray-700 line-clamp-2 w-2/3">{prod.caracteristicas}</p>
                           
                           <div className="text-right">
-                             {/* PRECIO ÚNICO (Mobile) */}
                              {(() => {
                                   const precios = prod.precios || {};
                                   if (precios['COP']) {
-                                      return <p className="text-sm font-bold text-green-600">COP ${precios['COP'].toLocaleString()}</p>;
+                                      return <p className="text-sm font-bold text-green-700">COP ${precios['COP'].toLocaleString()}</p>;
                                   }
                                   const keys = Object.keys(precios);
                                   if (keys.length > 0) {
-                                      return <p className="text-sm font-bold text-green-600">{keys[0]} ${precios[keys[0]].toLocaleString()}</p>;
+                                      return <p className="text-sm font-bold text-green-700">{keys[0]} ${precios[keys[0]].toLocaleString()}</p>;
                                   }
                                   return null;
                               })()}
@@ -371,11 +357,10 @@ export default function InventoryPage() {
                   ))}
                 </div>
 
-                {/* Empty State */}
                 {productos.length === 0 && (
-                  <div className="p-8 sm:p-10 text-center text-gray-400">
+                  <div className="p-8 sm:p-10 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-2">
-                      <Package size={32} className="opacity-20"/>
+                      <Package size={32} className="opacity-50"/>
                       <p className="text-sm">Esta empresa no tiene productos registrados aún.</p>
                     </div>
                   </div>
@@ -387,6 +372,6 @@ export default function InventoryPage() {
       
       {nit && <ChatWidget empresaNit={nit} />}
       
-    </div>
+    </main>
   );
 }

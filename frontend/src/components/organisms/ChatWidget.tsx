@@ -56,7 +56,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
     const userMsg = input;
     setInput("");
     
-    // Optimistic UI Update
     const newHistory = [...messages, { id: Date.now(), text: userMsg, isBot: false, timestamp: new Date() }];
     setMessages(newHistory);
     setLoading(true);
@@ -103,8 +102,6 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
         bg-white sm:rounded-2xl shadow-2xl 
         flex flex-col overflow-hidden
         border border-gray-100
-        
-        /* CAMBIO CLAVE 2: 'pointer-events-auto' para poder interactuar con el chat */
         pointer-events-auto
       `}>
         
@@ -129,12 +126,14 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
                 onClick={clearChat} 
                 title="Limpiar chat"
                 className="p-2 hover:bg-black/10 rounded-full transition-colors text-yellow-900"
+                aria-label="Borrar historial del chat"
             >
                 <Trash2 size={18} />
             </button>
             <button 
                 onClick={toggleChat} 
                 className="p-2 hover:bg-black/10 rounded-full transition-colors text-yellow-900"
+                aria-label="Cerrar ventana de chat"
             >
                 {window.innerWidth < 640 ? <ChevronDown size={24} /> : <X size={20} />}
             </button>
@@ -198,7 +197,9 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
         {/* FOOTER */}
         <div className="p-3 sm:p-4 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
           <form onSubmit={handleSend} className="relative flex items-center gap-2">
+            <label htmlFor="chat-input" className="sr-only">Escribe tu mensaje</label>
             <input 
+              id="chat-input"
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -210,6 +211,7 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
                 type="submit" 
                 disabled={loading || !input.trim()} 
                 className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200 ${loading || !input.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#E6C200] text-black hover:bg-[#D4B200] hover:scale-105 shadow-md active:scale-95'}`}
+                aria-label="Enviar mensaje"
             >
               {loading ? (<div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>) : (<Send size={18} className={input.trim() ? 'ml-0.5' : ''}/>)}
             </button>
@@ -220,8 +222,10 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
         </div>
       </div>
 
+      {/* BOTÓN FLOTANTE PRINCIPAL */}
       <button 
         onClick={toggleChat}
+        aria-label={isOpen ? "Cerrar asistente" : "Abrir asistente virtual"}
         className={`
             group relative pointer-events-auto
             flex items-center justify-center
@@ -238,9 +242,9 @@ export const ChatWidget = ({ empresaNit, onOpenChange }: ChatWidgetProps) => {
         <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-white rounded-full animate-bounce"></span>
       </button>
 
-        {/* Botón de cierre externo */}
        <button 
         onClick={toggleChat}
+        aria-label="Cerrar chat"
         className={`
             fixed bottom-4 right-4 sm:bottom-8 sm:right-8
             w-14 h-14 sm:w-16 sm:h-16 

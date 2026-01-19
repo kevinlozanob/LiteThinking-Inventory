@@ -1,15 +1,15 @@
-import { useEffect, useRef} from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { AuthTemplate } from '../components/templates/AuthTemplate';
 import { LoginForm } from '../components/organisms/LoginForm';
 import { SocialLogin } from '../components/organisms/SocialLogin';
 import { useToast } from '../context/ToastContext';
+import { SEO } from '../components/atoms/SEO';
 
 export default function Login() {
   const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const toastShown = useRef(false);
-
 
   useEffect(() => {
     if (searchParams.get('expired') === 'true' && !toastShown.current) {
@@ -25,27 +25,37 @@ export default function Login() {
 
   return (
     <AuthTemplate>
-      <h2 className="mb-4 sm:mb-6 text-center text-lg sm:text-xl font-bold text-white">
+      <SEO 
+        title="Iniciar Sesión" 
+        description="Ingresa a tu cuenta de Lite Thinking para gestionar tus proyectos y acceder a la plataforma de forma segura."
+      />
+      
+      <h1 className="mb-4 sm:mb-6 text-center text-lg sm:text-xl font-bold text-white">
         Bienvenido de nuevo
-      </h2>
+      </h1>
 
       <LoginForm />
-
-      <div className="mt-3 sm:mt-4 text-center">
-        <a href="#" className="text-xs sm:text-sm font-semibold text-white hover:underline hover:text-[#E6C200]">
+      <div className="mt-4 text-center">
+        <button 
+            type="button" 
+            className="text-xs sm:text-sm font-semibold text-white hover:underline hover:text-[#E6C200] bg-transparent border-none cursor-pointer inline-block w-full py-3"
+            onClick={() => showToast("Funcionalidad en desarrollo", "info")}
+        >
           Crea tu nueva contraseña ahora
-        </a>
+        </button>
       </div>
-
-      <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-white">
+      <div className="mt-2 text-center text-xs sm:text-sm text-white">
         ¿Aún no tienes tu cuenta Lite Thinking?
         <br />
-        <a href="/register" className="font-bold hover:text-[#E6C200] underline">
+        <Link 
+            to="/register" 
+            className="font-bold hover:text-[#E6C200] underline inline-block w-full py-3"
+        >
           Crea tu cuenta
-        </a>
+        </Link>
       </div>
 
-      <div className="mt-4 sm:mt-6 mb-3 sm:mb-4 text-center text-xs sm:text-sm text-gray-300">
+      <div className="mt-2 mb-4 text-center text-xs sm:text-sm text-gray-300">
         O inicia sesión usando:
       </div>
 
