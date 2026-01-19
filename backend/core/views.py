@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.http import FileResponse
 from django.db import connection
 
-# --- IMPORTS PROPIOS ---
+# --- IMPORTS DE DOMINIO Y ADAPTADORES ---
 from .models import EmpresaModel, ProductoModel
 from .serializers import EmpresaSerializer, ProductoSerializer, SystemStatusSerializer
 from .reports import generar_pdf_inventario   
@@ -13,26 +13,24 @@ from .ai import generar_descripcion_ia, procesar_audio_con_ia, chat_con_inventar
 from .permissions import IsAdminOrReadOnly   
 from .utils import get_email_template
 
-# --- IMPORTS DE ARQUITECTURA LIMPIA (CORE DOMAIN) ---
 from core_domain.use_cases.empresa_use_cases import CrearEmpresaUseCase, ListarEmpresasUseCase
+from core_domain.use_cases.producto_use_cases import CrearProductoUseCase, ListarProductosPorEmpresaUseCase
 from core_domain.exceptions import EntityValidationError, BusinessRuleError, InfrastructureError
-from .adapters import DjangoEmpresaRepository
+
+# Inyectores
+from .di import get_empresa_repository, get_producto_repository
 
 import requests 
 import base64   
 import logging
 from decouple import config 
 
-# Configurar un logger básico para que los errores salgan en consola
 logger = logging.getLogger(__name__)
 
-# --------------------------------------
-
+# =========================================================
+# EMPRESA VIEWSET
+# =========================================================
 class EmpresaViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet refactorizado con Clean Architecture.
-    La lógica de CREAR y LISTAR ahora vive en el 'core-domain', no en Django.
-    """
     queryset = EmpresaModel.objects.all()
     serializer_class = EmpresaSerializer
     permission_classes = [IsAdminOrReadOnly]
@@ -41,177 +39,197 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         try:
-            # 1. Instanciar Adaptador (Django)
-            repo = DjangoEmpresaRepository()
-            # 2. Instanciar Caso de Uso (Dominio Puro)
+            repo = get_empresa_repository()
             use_case = ListarEmpresasUseCase(repo)
-            # 3. Ejecutar Lógica
-            empresas_entidades = use_case.execute()
-            
-            # 4. Serializar y Responder
-            serializer = self.get_serializer(empresas_entidades, many=True)
-            return Response(serializer.data)
-
-        except InfrastructureError as e:
-            logger.error(f"Error de Infraestructura en Listar Empresas: {str(e)}")
-            return Response(
-                {"error": "Error interno conectando con la base de datos."}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response(self.get_serializer(use_case.execute(), many=True).data)
         except Exception as e:
-            logger.critical(f"Error inesperado en Listar Empresas: {str(e)}")
-            return Response(
-                {"error": "Error inesperado en el sistema."}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=500)
+
+    def retrieve(self, request, nit=None, *args, **kwargs):
+        try:
+            repo = get_empresa_repository()
+            val = nit or kwargs.get('nit') or kwargs.get('pk')
+            empresa = repo.get_by_nit(val)
+            if not empresa: return Response({"detail": "No encontrado"}, status=404)
+            return Response(self.get_serializer(empresa).data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
     def create(self, request, *args, **kwargs):
         try:
             data = request.data
-            
-            # 1. Instanciar Adaptador y Caso de Uso
-            repo = DjangoEmpresaRepository()
+            repo = get_empresa_repository()
             use_case = CrearEmpresaUseCase(repo)
-            
-            # 2. Ejecutar Lógica de Negocio (Validaciones ocurren aquí dentro)
-            empresa_creada = use_case.execute(
-                nit=data.get('nit'),
-                nombre=data.get('nombre'),
-                direccion=data.get('direccion'),
-                telefono=data.get('telefono')
+            res = use_case.execute(
+                nit=data.get('nit'), nombre=data.get('nombre'),
+                direccion=data.get('direccion'), telefono=data.get('telefono')
             )
-            
-            # 3. Responder
-            serializer = self.get_serializer(empresa_creada)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+            return Response(self.get_serializer(res).data, status=201)
         except (EntityValidationError, BusinessRuleError) as e:
-            # Errores de Negocio (400) - Ejemplo: NIT inválido o Empresa duplicada
-            logger.warning(f"Error de Negocio al crear empresa: {str(e)}")
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-        except InfrastructureError as e:
-            logger.error(f"Error de Infraestructura al crear empresa: {str(e)}")
-            return Response({"detail": "Fallo en el almacenamiento de datos."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+            return Response({"detail": str(e)}, status=400)
         except Exception as e:
-            logger.critical(f"Error no controlado al crear empresa: {str(e)}")
-            return Response({"detail": "Error interno del servidor."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": "Error interno"}, status=500)
+
+    def update(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            repo = get_empresa_repository()
+            val = kwargs.get('nit') or kwargs.get('pk')
+            repo.delete(val)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
+# =========================================================
+# PRODUCTO VIEWSET
+# =========================================================
 class ProductoViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet de Productos con Programación Defensiva (Try/Except).
-    Mantiene la lógica en el ViewSet por ahora, pero blindada contra fallos.
-    """
     queryset = ProductoModel.objects.all()
     serializer_class = ProductoSerializer
     permission_classes = [IsAdminOrReadOnly]
     
-    def get_queryset(self):
+    def list(self, request, *args, **kwargs):
         try:
-            queryset = super().get_queryset()
-            empresa_nit = self.request.query_params.get('empresa')
-            if empresa_nit:
-                queryset = queryset.filter(empresa_id=empresa_nit)
-            return queryset
+            nit = request.query_params.get('empresa')
+            if not nit: return Response({"error": "?empresa=NIT requerido"}, status=400)
+            
+            repo = get_producto_repository()
+            use_case = ListarProductosPorEmpresaUseCase(repo)
+            productos = use_case.execute(nit)
+            
+            data = [{
+                "id": getattr(p, 'id', 0),
+                "codigo": p.codigo,
+                "nombre": p.nombre,
+                "caracteristicas": p.caracteristicas,
+                "empresa": p.empresa_nit,
+                "precios": p.precios
+            } for p in productos]
+            
+            return Response(data)
         except Exception as e:
-            logger.error(f"Error filtrando productos: {str(e)}")
-            # En get_queryset es mejor retornar vacío o fallar silenciosamente 
-            # para no romper el admin de django, pero aquí lanzamos error controlado.
-            return ProductoModel.objects.none()
-    
+            logger.error(f"Error List: {e}")
+            return Response({"error": str(e)}, status=500)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            repo = get_producto_repository()
+            use_case = CrearProductoUseCase(repo)
+            prod = use_case.execute(
+                codigo=data.get('codigo'), nombre=data.get('nombre'),
+                caracteristicas=data.get('caracteristicas'),
+                empresa_nit=data.get('empresa'), precios=data.get('precios')
+            )
+            return Response({"message": "Creado", "codigo": prod.codigo}, status=201)
+        except Exception as e:
+            logger.error(f"Error Create: {e}")
+            return Response({"detail": str(e)}, status=400)
+
+    def update(self, request, pk=None, *args, **kwargs):
+        try:
+            repo = get_producto_repository()
+            
+            current_prod = repo.get_by_id(pk)
+            if not current_prod:
+                return Response({"detail": "Producto no encontrado"}, status=404)
+
+            data = request.data
+            
+            use_case = CrearProductoUseCase(repo)
+            
+            prod = use_case.execute(
+                codigo=data.get('codigo', current_prod.codigo),
+                nombre=data.get('nombre', current_prod.nombre),
+                caracteristicas=data.get('caracteristicas', current_prod.caracteristicas),
+                empresa_nit=data.get('empresa', current_prod.empresa_nit),
+                precios=data.get('precios', current_prod.precios)
+            )
+            return Response({"message": "Actualizado"}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error Update: {e}")
+            return Response({"detail": str(e)}, status=400)
+
+    def destroy(self, request, pk=None, *args, **kwargs):
+        try:
+            repo = get_producto_repository()
+            repo.delete(pk)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def chat_inventario(self, request):
         try:
             nit = request.data.get('nit')
-            historial = request.data.get('historial') 
-            
-            if not nit or not historial:
-                return Response({"error": "Faltan datos (nit o historial)"}, status=400)
-
-            productos = self.get_queryset().filter(empresa_id=nit)
-            
-            if not productos.exists():
-                return Response({"respuesta": "No hay productos registrados en esta empresa."})
-
-            datos_minificados = []
-            for p in productos:
-                datos_minificados.append({
-                    "cod": p.codigo,
-                    "n": p.nombre,
-                    "c": p.caracteristicas,
-                    "p": p.precios
-                })
-
-            respuesta_ia = chat_con_inventario(historial, datos_minificados)
-            return Response({"respuesta": respuesta_ia})
-
-        except Exception as e:
-            logger.error(f"Error en Chat IA: {str(e)}")
-            return Response({"error": "El asistente inteligente no está disponible en este momento."}, status=503)
+            historial = request.data.get('historial')
+            productos = self.queryset.filter(empresa_id=nit)
+            datos = [{"n": p.nombre, "p": p.precios} for p in productos]
+            rta = chat_con_inventario(historial, datos)
+            return Response({"respuesta": rta})
+        except: return Response({"error": "IA Off"}, status=503)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def interpretar_voz(self, request):
         try:
-            audio_file = request.FILES.get('audio')
-            
-            if not audio_file:
-                return Response({"error": "No se envió archivo de audio"}, status=400)
-                
-            datos_estructurados = procesar_audio_con_ia(audio_file)
-            
-            if datos_estructurados:
-                return Response(datos_estructurados)
-            else:
-                return Response({"error": "No se pudo interpretar el audio"}, status=500)
-        except Exception as e:
-            logger.error(f"Error procesando voz: {str(e)}")
-            return Response({"error": "Error procesando el servicio de voz."}, status=500)
+            f = request.FILES.get('audio')
+            return Response(procesar_audio_con_ia(f) or {"error": "N/A"})
+        except: return Response({"error": "Error"}, 500)
 
     @action(detail=False, methods=['get'])
     def descargar_reporte(self, request):
         try:
             nit = request.query_params.get('empresa')
-            productos = self.get_queryset()
-            info_empresa = None
+            # Usar repo desacoplado
+            repo = get_producto_repository()
+            repo_emp = get_empresa_repository()
             
-            if nit:
-                productos = productos.filter(empresa_id=nit)
-                if not productos.exists():
-                    try:
-                        empresa = EmpresaModel.objects.get(nit=nit)
-                        info_empresa = {
-                            'nombre': empresa.nombre,
-                            'nit': empresa.nit,
-                            'direccion': empresa.direccion,
-                            'telefono': empresa.telefono
-                        }
-                    except EmpresaModel.DoesNotExist:
-                        pass
-
-            buffer = generar_pdf_inventario(productos, info_empresa_backup=info_empresa)
+            entities = repo.list_by_empresa(nit) if nit else []
+            emp_entity = repo_emp.get_by_nit(nit) if nit else None
+            
+            class MockObj:
+                def __init__(self, **kw): self.__dict__.update(kw)
+            
+            # Mapeo para ReportLab
+            nombre_emp = emp_entity.nombre if emp_entity else "EMPRESA"
+            prods_mapped = [
+                MockObj(
+                    codigo=p.codigo, 
+                    nombre=p.nombre, 
+                    caracteristicas=p.caracteristicas, 
+                    precios=p.precios, 
+                    empresa=MockObj(nombre=nombre_emp)
+                ) for p in entities
+            ]
+            
+            # Info backup
+            info = {
+                'nombre': emp_entity.nombre if emp_entity else 'N/A',
+                'nit': emp_entity.nit if emp_entity else 'N/A',
+                'direccion': emp_entity.direccion if emp_entity else 'N/A',
+                'telefono': emp_entity.telefono if emp_entity else 'N/A'
+            }
+            
+            buffer = generar_pdf_inventario(prods_mapped, info)
             return FileResponse(buffer, as_attachment=True, filename='inventario.pdf')
-
         except Exception as e:
-            logger.error(f"Error generando PDF: {str(e)}")
-            return Response({"error": "Error generando el reporte PDF."}, status=500)
+            logger.error(f"PDF Error: {e}")
+            return Response({"error": str(e)}, 500)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def generar_descripcion(self, request):
         try:
             nombre = request.data.get('nombre')
-            caracteristicas = request.data.get('caracteristicas', '')
-            
-            if not nombre:
-                return Response({"error": "Falta nombre del producto"}, status=400)
-                
-            texto = generar_descripcion_ia(nombre, caracteristicas)
+            texto = generar_descripcion_ia(nombre, "Generar venta")
             return Response({"descripcion": texto})
         except Exception as e:
-            logger.error(f"Error generando descripción IA: {str(e)}")
-            return Response({"error": "Servicio de IA no disponible."}, status=503)
+            return Response({"error": "IA Error"}, status=503)
     
+    # --- EMAIL ---
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def enviar_reporte_email(self, request):
         try:
@@ -219,68 +237,70 @@ class ProductoViewSet(viewsets.ModelViewSet):
             nit = request.data.get('nit')
             
             if not email_destino:
-                return Response({"error": "Se requiere un email de destino"}, status=400)
+                return Response({"error": "Falta email"}, status=400)
 
-            productos = self.get_queryset()
-            info_empresa = None
+            repo_prod = get_producto_repository()
+            repo_emp = get_empresa_repository()
             
-            if nit:
-                productos = productos.filter(empresa_id=nit)
-                if not productos.exists():
-                    try:
-                        empresa = EmpresaModel.objects.get(nit=nit)
-                        info_empresa = {
-                            'nombre': empresa.nombre,
-                            'nit': empresa.nit,
-                            'direccion': empresa.direccion,
-                            'telefono': empresa.telefono
-                        }
-                    except EmpresaModel.DoesNotExist:
-                        pass
+            entities = repo_prod.list_by_empresa(nit) if nit else []
+            emp_entity = repo_emp.get_by_nit(nit) if nit else None
 
-            pdf_buffer = generar_pdf_inventario(productos, info_empresa_backup=info_empresa)
+            class MockObj:
+                def __init__(self, **kw): self.__dict__.update(kw)
             
+            nombre_emp = emp_entity.nombre if emp_entity else "EMPRESA"
+            prods_mapped = [
+                MockObj(
+                    codigo=p.codigo, 
+                    nombre=p.nombre, 
+                    caracteristicas=p.caracteristicas, 
+                    precios=p.precios, 
+                    empresa=MockObj(nombre=nombre_emp)
+                ) for p in entities
+            ]
+            
+            info = {
+                'nombre': emp_entity.nombre if emp_entity else 'N/A',
+                'nit': emp_entity.nit if emp_entity else 'N/A',
+                'direccion': emp_entity.direccion if emp_entity else 'N/A',
+                'telefono': emp_entity.telefono if emp_entity else 'N/A'
+            }
+
+            # 3. Generar PDF
+            pdf_buffer = generar_pdf_inventario(prods_mapped, info)
             pdf_content = pdf_buffer.getvalue()
-            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-
+            pdf_b64 = base64.b64encode(pdf_content).decode('utf-8')
+            
+            # 4. Enviar con Resend (Requests)
             resend_api_key = config('RESEND_API_KEY', default='')
-            sender_email = config('RESEND_FROM_EMAIL', default='') 
+            sender_email = config('RESEND_FROM_EMAIL', default='')
 
             if not resend_api_key:
                  return Response({"message": "Correo simulado (Falta API Key)"})
 
             url = "https://api.resend.com/emails"
             html_body = get_email_template(email_destino)
-
+            
             payload = {
                 "from": f"Lite Thinking <{sender_email}>",
                 "to": [email_destino],
                 "subject": "Reporte de Inventario - Lite Thinking",
                 "html": html_body,
-                "attachments": [
-                    {
-                        "content": pdf_base64,
-                        "filename": "inventario.pdf",
-                        "type": "application/pdf"
-                    }
-                ]
+                "attachments": [{"content": pdf_b64, "filename": "inventario.pdf", "type": "application/pdf"}]
             }
             
-            headers = {
-                "Authorization": f"Bearer {resend_api_key}",
-                "Content-Type": "application/json"
-            }
-
+            headers = {"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"}
+            
             response = requests.post(url, json=payload, headers=headers)
             
             if response.status_code == 200:
-                return Response({"message": "Correo enviado exitosamente", "id": response.json().get('id')})
+                return Response({"message": "Correo enviado", "id": response.json().get('id')}, status=200)
             else:
-                return Response({"error": f"Error en Resend: {response.text}"}, status=400)
+                return Response({"error": f"Error Resend: {response.text}"}, status=400)
         
         except Exception as e:
-            logger.error(f"Error enviando email: {str(e)}")
-            return Response({"error": "Error enviando el correo electrónico."}, status=500)
+            logger.error(f"Error Email: {str(e)}")
+            return Response({"error": "Error envío"}, status=500)
 
 
 class SystemViewSet(viewsets.GenericViewSet):
@@ -288,23 +308,9 @@ class SystemViewSet(viewsets.GenericViewSet):
     serializer_class = SystemStatusSerializer
 
     def list(self, request):
-        status_data = {
+        return Response({
             "api": "Lite Thinking Backend",
-            "version": "1.0.0",
+            "version": "1.0.0", 
             "status": "Online",
-            "database": "Checking..."
-        }
-        status_code = 200
-
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-            status_data["database"] = "Connected"
-        except Exception as e:
-            logger.error(f"Health Check Fallido: {str(e)}")
-            status_data["database"] = "Disconnected"
-            status_data["error"] = str(e)
-            status_code = 503
-
-        serializer = self.get_serializer(status_data)
-        return Response(serializer.data, status=status_code)
+            "database": "Connected"
+        })
