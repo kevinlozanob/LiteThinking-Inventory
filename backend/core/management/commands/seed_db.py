@@ -103,5 +103,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'SEEDING COMPLETADO: {len(dataset)} Empresas, {conteo_prod} Productos.'))
         self.stdout.write(self.style.SUCCESS('✅ Admin: nicklcsdev@gmail.com / nicklcsdev'))
         self.stdout.write(self.style.SUCCESS(
-    '✅ User: visitante@test.com / 123456 (Nota: Se pueden crear más usuarios externos mediante el registro)'
+    'User: visitante@test.com / 123456 (Nota: Se pueden crear más usuarios externos mediante el registro)'
 ))

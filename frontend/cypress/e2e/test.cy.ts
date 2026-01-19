@@ -326,7 +326,7 @@ describe('️ Protección de Rutas', () => {
 // 10. TESTS DE CREDENCIALES INCORRECTAS
 // =============================================================================
 
-describe('❌ Credenciales Incorrectas', () => {
+describe('Credenciales Incorrectas', () => {
 
   it('✓ Debe mostrar error con credenciales inválidas', () => {
     cy.visit(`${BASE_URL}/login`);
