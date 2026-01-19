@@ -7,12 +7,26 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_RIGHT, TA_LEFT, TA_CENTER
 
+# --- COLORES ---
 COLOR_BG_DARK = colors.HexColor("#0D0D0D")
 COLOR_BG_ACCENT = colors.HexColor("#1A1A1A")
 COLOR_YELLOW = colors.HexColor("#E6C200")
 COLOR_WHITE = colors.HexColor("#FFFFFF")
 COLOR_GRAY_LIGHT = colors.HexColor("#F2F2F2")
 COLOR_TEXT_MUTED = colors.HexColor("#888888")
+
+# --- FUNCION SALVAVIDAS (SANITIZACIÓN) ---
+def limpiar_texto(texto):
+    """
+    Elimina caracteres que no sean soportados por la codificación Latin-1
+    (Como emojis o caracteres asiáticos) para evitar que ReportLab explote.
+    Mantiene tildes y ñ.
+    """
+    if not isinstance(texto, str):
+        return str(texto)
+    
+    # Truco: Codifica a Latin-1 (ignorando errores/emojis) y decodifica de nuevo
+    return texto.encode('latin-1', 'ignore').decode('latin-1')
 
 def draw_header_footer(canvas, doc):
     canvas.saveState()
@@ -73,12 +87,16 @@ def generar_pdf_inventario(productos, info_empresa_backup=None):
     elements = []
     styles = getSampleStyleSheet()
 
+    # Obtener nombre empresa de forma segura
     if productos:
         empresa_nombre = productos[0].empresa.nombre
     elif info_empresa_backup:
         empresa_nombre = info_empresa_backup.get('nombre', 'N/A')
     else:
         empresa_nombre = "N/A"
+    
+    # Limpiamos el nombre de la empresa también por si acaso tiene emojis
+    empresa_nombre = limpiar_texto(empresa_nombre)
 
     fecha_hoy = datetime.now().strftime("%Y-%m-%d").upper()
     total_items = str(len(productos))
@@ -111,9 +129,13 @@ def generar_pdf_inventario(productos, info_empresa_backup=None):
     table_data = [headers]
 
     for p in productos:
-        nombre = p.nombre
-        code = p.codigo
-        chars = p.caracteristicas[:40] + "..." if len(p.caracteristicas) > 40 else p.caracteristicas
+        # --- AQUÍ OCURRE LA MAGIA ---
+        # Pasamos todo por el filtro antes de meterlo al PDF
+        nombre = limpiar_texto(p.nombre)
+        code = limpiar_texto(p.codigo)
+        
+        chars_raw = limpiar_texto(p.caracteristicas)
+        chars = chars_raw[:40] + "..." if len(chars_raw) > 40 else chars_raw
         
         precio_txt = "N/A"
         if p.precios and isinstance(p.precios, dict) and len(p.precios) > 0:

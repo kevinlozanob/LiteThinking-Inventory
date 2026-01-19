@@ -1,4 +1,4 @@
-import { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Algo salió mal</h1>
             <p className="text-gray-600 mb-6 text-sm">
-              Ocurrió un error inesperado en la aplicación. No te preocupes, se arregla recargando.
+              Ocurrió un error inesperado en la aplicación. No te preocupes, se arreglará recargando.
             </p>
             <button
               onClick={() => window.location.reload()}
